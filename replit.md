@@ -1,6 +1,6 @@
-# [Project name]
+# Animistia
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Animistia is a cinematic anime streaming app with a curated catalog, authenticated viewing spaces, YouTube embeds, and a protected developer upload room.
 
 ## Run & Operate
 
@@ -22,23 +22,39 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/animistia/src/pages/` — public discovery, catalog, watch, library, auth, and developer room screens.
+- `artifacts/animistia/src/components/` — the shared shell and catalog card presentation.
+- `artifacts/api-server/src/routes/` — catalog, developer lock, and object-storage API routes.
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts and generated client hooks.
+- `lib/db/src/schema/` — Drizzle schema for shows and developer lock settings.
+- `artifacts/animistia/public/logo.png` and `logo.svg` — supplied Animistia mark for the app and Clerk screens.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Clerk provides browser authentication; API protection uses Clerk session cookies rather than manually managed bearer tokens.
+- Video bytes upload directly to Replit App Storage via presigned URLs; PostgreSQL stores only show metadata and object paths.
+- YouTube sources are stored as canonical URLs and converted to embed URLs only at playback time.
+- The developer lock stores a salted scrypt hash and never persists the raw password.
+- The landing page remains public; library and developer tools require a signed-in Clerk session.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Browse a handpicked anime catalog by title, genre, or source.
+- Watch YouTube embeds and uploaded videos in a dedicated viewing surface.
+- Save titles locally to a signed-in personal library.
+- Add, edit, feature, and remove catalog titles from the developer room.
+- Upload MP4/WebM/MOV files through protected direct-to-storage upload flow.
+- Configure and verify a second password lock for the developer room.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- The user wants a premium, best-looking anime streaming experience branded from the supplied Animistia logo.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The API contract must be changed before regenerating `@workspace/api-client-react` and `@workspace/api-zod`.
+- Artifact workflows provide `PORT` and `BASE_PATH`; use the managed web workflow for preview rather than starting Vite manually.
+- Clerk development-key warnings are expected in preview and do not indicate a broken auth setup.
 
 ## Pointers
 

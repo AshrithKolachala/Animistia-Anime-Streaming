@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: catalog
+    description: Anime catalog and discovery operations
+  - name: admin
+    description: Developer-only content management operations
+  - name: storage
+    description: Object storage upload and serving endpoints
 paths:
   /healthz:
     get:
@@ -24,6 +30,276 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /shows:
+    get:
+      operationId: listShows
+      tags: [catalog]
+      summary: List anime shows
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sourceType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ShowSourceType"
+      responses:
+        "200":
+          description: Anime shows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Show"
+    post:
+      operationId: createShow
+      tags: [admin]
+      summary: Add an anime show to the catalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShowInput"
+      responses:
+        "201":
+          description: Created show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Show"
+        "400":
+          description: Invalid show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /shows/{id}:
+    get:
+      operationId: getShow
+      tags: [catalog]
+      summary: Get an anime show
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Anime show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Show"
+        "404":
+          description: Show not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    patch:
+      operationId: updateShow
+      tags: [admin]
+      summary: Update an anime show
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShowUpdate"
+      responses:
+        "200":
+          description: Updated show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Show"
+        "404":
+          description: Show not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteShow
+      tags: [admin]
+      summary: Remove an anime show
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Show removed
+        "404":
+          description: Show not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /highlights:
+    get:
+      operationId: getHighlights
+      tags: [catalog]
+      summary: Get featured catalog highlights
+      responses:
+        "200":
+          description: Featured show groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Highlights"
+  /admin/lock:
+    get:
+      operationId: getDeveloperLock
+      tags: [admin]
+      summary: Get developer upload lock state
+      responses:
+        "200":
+          description: Developer lock state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeveloperLock"
+    put:
+      operationId: updateDeveloperLock
+      tags: [admin]
+      summary: Configure developer upload lock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeveloperLockInput"
+      responses:
+        "200":
+          description: Updated developer lock state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeveloperLock"
+  /admin/lock/verify:
+    post:
+      operationId: verifyDeveloperLock
+      tags: [admin]
+      summary: Verify the developer upload password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeveloperLockVerify"
+      responses:
+        "200":
+          description: Lock verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeveloperLockVerification"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for a video upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid upload metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/public-objects/{filePath}:
+    get:
+      operationId: getPublicObject
+      tags: [storage]
+      summary: Serve a public asset
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve a private uploaded object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Object not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +309,198 @@ components:
           type: string
       required:
         - status
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    ShowSourceType:
+      type: string
+      enum: [uploaded, youtube]
+    Show:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        slug:
+          type: string
+        synopsis:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+        year:
+          type: number
+        rating:
+          type: number
+          format: double
+        episodesCount:
+          type: number
+        thumbnailUrl:
+          type: ["string", "null"]
+        bannerUrl:
+          type: ["string", "null"]
+        sourceType:
+          $ref: "#/components/schemas/ShowSourceType"
+        videoUrl:
+          type: ["string", "null"]
+        videoPath:
+          type: ["string", "null"]
+        featured:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - slug
+        - synopsis
+        - genres
+        - year
+        - rating
+        - episodesCount
+        - thumbnailUrl
+        - bannerUrl
+        - sourceType
+        - videoUrl
+        - videoPath
+        - featured
+        - createdAt
+    ShowInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        synopsis:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+        year:
+          type: number
+        rating:
+          type: number
+          format: double
+        episodesCount:
+          type: number
+        thumbnailUrl:
+          type: ["string", "null"]
+        bannerUrl:
+          type: ["string", "null"]
+        sourceType:
+          $ref: "#/components/schemas/ShowSourceType"
+        videoUrl:
+          type: ["string", "null"]
+        videoPath:
+          type: ["string", "null"]
+        featured:
+          type: boolean
+      required: [title, synopsis, genres, year, rating, episodesCount, sourceType, featured]
+    ShowUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        synopsis:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+        year:
+          type: number
+        rating:
+          type: number
+          format: double
+        episodesCount:
+          type: number
+        thumbnailUrl:
+          type: ["string", "null"]
+        bannerUrl:
+          type: ["string", "null"]
+        sourceType:
+          $ref: "#/components/schemas/ShowSourceType"
+        videoUrl:
+          type: ["string", "null"]
+        videoPath:
+          type: ["string", "null"]
+        featured:
+          type: boolean
+    Highlights:
+      type: object
+      properties:
+        featured:
+          type: array
+          items:
+            $ref: "#/components/schemas/Show"
+        trending:
+          type: array
+          items:
+            $ref: "#/components/schemas/Show"
+        latest:
+          type: array
+          items:
+            $ref: "#/components/schemas/Show"
+      required: [featured, trending, latest]
+    DeveloperLock:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        configured:
+          type: boolean
+      required: [enabled, configured]
+    DeveloperLockInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        password:
+          type: ["string", "null"]
+          minLength: 4
+      required: [enabled]
+    DeveloperLockVerify:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+      required: [password]
+    DeveloperLockVerification:
+      type: object
+      properties:
+        verified:
+          type: boolean
+      required: [verified]
+    UploadUrlRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: number
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+      required: [name, size, contentType]
+    UploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+      required: [uploadURL, objectPath, metadata]
 

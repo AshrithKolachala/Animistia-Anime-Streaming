@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 240 13% 7%;
+  --foreground: 42 31% 93%;
+  --border: 240 9% 19%;
+  --input: 240 10% 15%;
+  --ring: 41 88% 68%;
+  --card: 240 12% 10%;
+  --card-foreground: 42 31% 93%;
+  --primary: 41 88% 68%;
+  --primary-foreground: 240 13% 7%;
+  --secondary: 240 10% 15%;
+  --secondary-foreground: 42 31% 93%;
+  --muted: 240 9% 15%;
+  --muted-foreground: 240 7% 62%;
+  --accent: 347 48% 58%;
+  --accent-foreground: 42 31% 93%;
+  --destructive: 0 68% 58%;
+  --radius: 0.75rem;
+  --app-font-sans: 'Manrope', sans-serif;
+  --app-font-serif: 'Playfair Display', Georgia, serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, .36);
+}
+
+.dark {
+  --background: 240 13% 7%;
+  --foreground: 42 31% 93%;
+  --border: 240 9% 19%;
+  --input: 240 10% 15%;
+  --ring: 41 88% 68%;
+  --card: 240 12% 10%;
+  --card-foreground: 42 31% 93%;
+  --primary: 41 88% 68%;
+  --primary-foreground: 240 13% 7%;
+  --secondary: 240 10% 15%;
+  --secondary-foreground: 42 31% 93%;
+  --muted: 240 9% 15%;
+  --muted-foreground: 240 7% 62%;
+  --accent: 347 48% 58%;
+  --accent-foreground: 42 31% 93%;
+  --destructive: 0 68% 58%;
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { background: hsl(var(--background)); scroll-behavior: smooth; }
+  body { @apply font-sans antialiased bg-background text-foreground; min-width: 320px; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: hsl(var(--primary) / .28); color: hsl(var(--foreground)); }
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes drift { from { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -10px, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.animate-rise { animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
+.animate-drift { animation: drift 7s ease-in-out infinite; }
+.delay-1 { animation-delay: .08s; } .delay-2 { animation-delay: .16s; } .delay-3 { animation-delay: .24s; }
+.skeleton { background: linear-gradient(100deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%); background-size: 400% 100%; animation: shimmer 1.5s infinite; }
+.grain::after { content: ''; pointer-events: none; position: fixed; inset: 0; opacity: .035; z-index: 50; background-image: radial-gradient(rgba(255,255,255,.7) .55px, transparent .55px); background-size: 5px 5px; }
+.font-display { font-family: var(--app-font-serif); }
+.font-mono-app { font-family: var(--app-font-mono); }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { scrollbar-width: none; }

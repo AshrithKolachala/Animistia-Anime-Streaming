@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Animistia"
+description = "A premium anime streaming app where viewers can discover and watch anime, while the developer manages uploaded videos and curated YouTube embeds behind protected access."
+version = "1.0.0"
+id = "artifacts/animistia"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19047
+
+[services.development]
+run = "pnpm --filter @workspace/animistia run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/animistia", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/animistia/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19047"
+BASE_PATH = "/"
