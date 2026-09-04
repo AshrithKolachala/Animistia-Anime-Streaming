@@ -17,6 +17,7 @@ export const showsTable = pgTable("shows", {
   sourceType: text("source_type", { enum: ["uploaded", "youtube"] }).notNull(),
   videoUrl: text("video_url"),
   videoPath: text("video_path"),
+  captionsPath: text("captions_path"),
   featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

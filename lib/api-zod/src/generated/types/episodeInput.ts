@@ -18,4 +18,6 @@ export interface EpisodeInput {
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
 }

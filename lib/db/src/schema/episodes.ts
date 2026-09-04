@@ -12,6 +12,7 @@ export const episodesTable = pgTable("episodes", {
   sourceType: text("source_type", { enum: ["uploaded", "youtube"] }).notNull(),
   videoUrl: text("video_url"),
   videoPath: text("video_path"),
+  captionsPath: text("captions_path"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   seasonEpisodeUnique: unique("episodes_season_id_episode_number_unique").on(table.seasonId, table.episodeNumber),

@@ -48,6 +48,8 @@ export interface Show {
   videoUrl: string | null;
   /** @nullable */
   videoPath: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
   featured: boolean;
   createdAt: string;
 }
@@ -70,6 +72,8 @@ export interface ShowInput {
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
   featured: boolean;
 }
 
@@ -91,6 +95,8 @@ export interface ShowUpdate {
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
   featured?: boolean;
 }
 
@@ -125,6 +131,8 @@ export interface Episode {
   videoUrl: string | null;
   /** @nullable */
   videoPath: string | null;
+  /** @nullable */
+  captionsPath: string | null;
   createdAt: string;
 }
 
@@ -139,6 +147,8 @@ export interface EpisodeInput {
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
 }
 
 export interface DeveloperLock {

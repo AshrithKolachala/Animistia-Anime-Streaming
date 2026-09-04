@@ -26,5 +26,7 @@ export interface ShowUpdate {
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
   featured?: boolean;
 }

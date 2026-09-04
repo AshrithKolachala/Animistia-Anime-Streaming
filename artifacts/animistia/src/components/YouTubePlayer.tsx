@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Maximize, Pause, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Captions, Maximize, Pause, Play, RotateCcw, Volume2 } from 'lucide-react';
 
 type YouTubePlayerState = {
   getCurrentTime: () => number;
@@ -64,7 +64,30 @@ function formatTime(value: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { videoId: string; title: string; seriesTitle: string; episodeLabel: string }) {
+type CaptionCue = { start: number; end: number; text: string };
+
+function parseCaptionTime(value: string) {
+  const parts = value.trim().replace(',', '.').split(':').map(Number);
+  if (parts.some((part) => !Number.isFinite(part))) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return parts[0] * 60 + parts[1];
+}
+
+function parseVtt(text: string): CaptionCue[] {
+  const lines = text.replace(/\r/g, '').split('\n');
+  const cues: CaptionCue[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const timing = lines[index].match(/(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{3})\s+-->\s+(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{3})/);
+    if (!timing) continue;
+    const cueLines: string[] = [];
+    for (let next = index + 1; next < lines.length && lines[next].trim(); next += 1) cueLines.push(lines[next].replace(/<[^>]+>/g, ''));
+    cues.push({ start: parseCaptionTime(timing[1]), end: parseCaptionTime(timing[2]), text: cueLines.join(' ').trim() });
+    index += cueLines.length;
+  }
+  return cues.filter((cue) => cue.text);
+}
+
+export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, captionsText }: { videoId: string; title: string; seriesTitle: string; episodeLabel: string; captionsText?: string | null }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayerState | null>(null);
@@ -73,6 +96,9 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { v
   const [muted, setMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const captionCues = useMemo(() => (captionsText ? parseVtt(captionsText) : []), [captionsText]);
+  const activeCaption = useMemo(() => captionCues.find((cue) => currentTime >= cue.start && currentTime <= cue.end), [captionCues, currentTime]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +106,7 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { v
     setPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    setCaptionsEnabled(false);
 
     loadYouTubeApi().then((YT) => {
       if (cancelled || !mountRef.current) return;
@@ -91,6 +118,7 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { v
           modestbranding: 1,
           rel: 0,
           iv_load_policy: 3,
+          cc_load_policy: 0,
           playsinline: 1,
           origin: window.location.origin,
         },
@@ -166,21 +194,21 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { v
   };
 
   return (
-    <div ref={shellRef} className="youtube-player-shell relative w-full bg-[#080d1a]">
-      <div className="youtube-player-video relative aspect-video w-full overflow-hidden rounded-2xl">
-        <div ref={mountRef} className="absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full" />
-        {!ready && <div className="absolute inset-0 flex items-center justify-center bg-[#0d1020]/90"><span className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200/70">Initializing screening room</span></div>}
-        <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-5 sm:px-5">
-          <div className="font-mono-app text-[9px] uppercase tracking-[.22em] text-cyan-200/70">Now screening</div>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-display text-lg text-white sm:text-xl">{seriesTitle}</span><span className="font-mono-app text-[10px] uppercase tracking-widest text-cyan-100/70">{episodeLabel}</span></div>
-        </div>
+    <div ref={shellRef} className="youtube-player-shell absolute inset-0 bg-[#080d1a]">
+      <div ref={mountRef} className="absolute inset-0 overflow-hidden rounded-2xl [&>iframe]:h-full [&>iframe]:w-full" />
+      {!ready && <div className="absolute inset-0 flex items-center justify-center bg-[#0d1020]/90"><span className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200/70">Initializing screening room</span></div>}
+      <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-5 sm:px-5">
+        <div className="font-mono-app text-[9px] uppercase tracking-[.22em] text-cyan-200/70">Now screening</div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-display text-lg text-white sm:text-xl">{seriesTitle}</span><span className="font-mono-app text-[10px] uppercase tracking-widest text-cyan-100/70">{episodeLabel}</span></div>
       </div>
-      <div className="mt-2 rounded-2xl border border-cyan-200/20 bg-[#10152a]/90 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:mt-3 sm:p-4 sm:pb-5">
+      {captionsEnabled && activeCaption && <div className="pointer-events-none absolute inset-x-5 bottom-28 z-20 flex justify-center text-center sm:bottom-32"><span className="max-w-[85%] rounded-lg bg-black/75 px-4 py-2 text-sm font-medium leading-6 text-white shadow-lg backdrop-blur-sm sm:text-base">{activeCaption.text}</span></div>}
+      <div className="absolute inset-x-3 bottom-2 rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:inset-x-5 sm:bottom-4 sm:p-4 sm:pb-5">
         <input aria-label="Video progress" type="range" min="0" max={Math.max(duration, 1)} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => seek(Number(event.target.value))} disabled={!ready || !duration} className="youtube-progress mb-3 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-cyan-300 disabled:cursor-not-allowed disabled:opacity-40" />
         <div className="flex items-center gap-2 text-cyan-50 sm:gap-3">
           <button type="button" onClick={togglePlayback} disabled={!ready} className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-300 text-[#07101e] transition hover:bg-cyan-200 disabled:opacity-40" aria-label={playing ? 'Pause video' : 'Play video'} data-testid="button-youtube-play">{playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}</button>
           <button type="button" onClick={skipIntro} disabled={!ready} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/25 px-3 py-2 font-mono-app text-[9px] uppercase tracking-widest text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-200/10 disabled:opacity-40" aria-label="Skip intro by 90 seconds" data-testid="button-skip-intro"><RotateCcw size={12} /> Skip intro <span className="text-cyan-300">+90</span></button>
           <span className="ml-auto whitespace-nowrap font-mono-app text-[10px] tabular-nums text-cyan-100/75">{formatTime(currentTime)} <span className="text-cyan-100/35">/</span> {formatTime(duration)}</span>
+           <button type="button" onClick={() => setCaptionsEnabled((enabled) => !enabled)} disabled={!captionCues.length} className={`flex h-8 items-center gap-1 rounded-full px-2 font-mono-app text-[9px] uppercase tracking-widest transition sm:px-2.5 ${captionsEnabled ? 'bg-cyan-300 text-[#07101e]' : 'text-cyan-100/80 hover:bg-cyan-200/10 hover:text-cyan-100'} disabled:opacity-35`} aria-label={captionsEnabled ? 'Hide captions' : 'Show captions'} aria-pressed={captionsEnabled}><Captions size={15} /><span className="hidden sm:inline">CC</span></button>
           <button type="button" onClick={toggleMute} disabled={!ready} className="hidden h-8 w-8 items-center justify-center rounded-full text-cyan-100/80 transition hover:bg-cyan-200/10 hover:text-cyan-100 sm:flex" aria-label={muted ? 'Unmute video' : 'Mute video'}>{muted ? <Volume2 size={15} className="opacity-40" /> : <Volume2 size={15} />}</button>
           <button type="button" onClick={fullscreen} disabled={!ready} className="hidden h-8 w-8 items-center justify-center rounded-full text-cyan-100/80 transition hover:bg-cyan-200/10 hover:text-cyan-100 sm:flex" aria-label="Fullscreen video"><Maximize size={15} /></button>
         </div>

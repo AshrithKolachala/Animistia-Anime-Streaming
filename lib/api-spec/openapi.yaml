@@ -473,6 +473,8 @@ components:
           type: ["string", "null"]
         videoPath:
           type: ["string", "null"]
+        captionsPath:
+          type: ["string", "null"]
         featured:
           type: boolean
         createdAt:
@@ -526,6 +528,8 @@ components:
           type: ["string", "null"]
         videoPath:
           type: ["string", "null"]
+        captionsPath:
+          type: ["string", "null"]
         featured:
           type: boolean
       required: [title, synopsis, genres, year, rating, episodesCount, mediaType, sourceType, featured]
@@ -559,6 +563,8 @@ components:
         videoUrl:
           type: ["string", "null"]
         videoPath:
+          type: ["string", "null"]
+        captionsPath:
           type: ["string", "null"]
         featured:
           type: boolean
@@ -621,10 +627,12 @@ components:
           type: ["string", "null"]
         videoPath:
           type: ["string", "null"]
+        captionsPath:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
-      required: [id, seasonId, episodeNumber, title, synopsis, sourceType, videoUrl, videoPath, createdAt]
+      required: [id, seasonId, episodeNumber, title, synopsis, sourceType, videoUrl, videoPath, captionsPath, createdAt]
     EpisodeInput:
       type: object
       properties:
@@ -641,6 +649,8 @@ components:
         videoUrl:
           type: ["string", "null"]
         videoPath:
+          type: ["string", "null"]
+        captionsPath:
           type: ["string", "null"]
       required: [episodeNumber, title, synopsis, sourceType]
     DeveloperLock:

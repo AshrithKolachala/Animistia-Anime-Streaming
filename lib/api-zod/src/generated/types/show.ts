@@ -27,6 +27,8 @@ export interface Show {
   videoUrl: string | null;
   /** @nullable */
   videoPath: string | null;
+  /** @nullable */
+  captionsPath?: string | null;
   featured: boolean;
   createdAt: Date;
 }

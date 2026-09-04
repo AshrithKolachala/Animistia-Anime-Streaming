@@ -41,6 +41,7 @@ export const ListShowsResponseItem = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -66,6 +67,7 @@ export const CreateShowBody = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullish(),
   "videoPath": zod.string().nullish(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean()
 })
 
@@ -84,6 +86,7 @@ export const CreateShowResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -111,6 +114,7 @@ export const GetShowResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -139,6 +143,7 @@ export const UpdateShowBody = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']).optional(),
   "videoUrl": zod.string().nullish(),
   "videoPath": zod.string().nullish(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean().optional()
 })
 
@@ -157,6 +162,7 @@ export const UpdateShowResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -229,6 +235,7 @@ export const ListEpisodesResponseItem = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListEpisodesResponse = zod.array(ListEpisodesResponseItem)
@@ -251,7 +258,8 @@ export const CreateEpisodeBody = zod.object({
   "synopsis": zod.string(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullish(),
-  "videoPath": zod.string().nullish()
+  "videoPath": zod.string().nullish(),
+  "captionsPath": zod.string().nullish()
 })
 
 export const CreateEpisodeResponse = zod.object({
@@ -263,6 +271,7 @@ export const CreateEpisodeResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -296,6 +305,7 @@ export const GetHighlightsResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })),
@@ -314,6 +324,7 @@ export const GetHighlightsResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 })),
@@ -332,6 +343,7 @@ export const GetHighlightsResponse = zod.object({
   "sourceType": zod.enum(['uploaded', 'youtube']),
   "videoUrl": zod.string().nullable(),
   "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullish(),
   "featured": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))

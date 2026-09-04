@@ -64,6 +64,7 @@ router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, re
       sourceType: body.data.sourceType,
       videoUrl: body.data.videoUrl ?? null,
       videoPath: body.data.videoPath ?? null,
+      captionsPath: body.data.captionsPath ?? null,
     }).returning();
     const [{ value: episodeCount }] = await db.select({ value: count() }).from(episodesTable).where(eq(episodesTable.seasonId, params.data.seasonId));
     await db.update(showsTable).set({ episodesCount: Number(episodeCount) }).where(eq(showsTable.id, season.showId));

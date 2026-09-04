@@ -18,5 +18,7 @@ export interface Episode {
   videoUrl: string | null;
   /** @nullable */
   videoPath: string | null;
+  /** @nullable */
+  captionsPath: string | null;
   createdAt: Date;
 }
