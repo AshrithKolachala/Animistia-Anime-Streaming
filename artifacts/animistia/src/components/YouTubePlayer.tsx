@@ -166,14 +166,16 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel }: { v
   };
 
   return (
-    <div ref={shellRef} className="youtube-player-shell absolute inset-0 bg-[#080d1a]">
-      <div ref={mountRef} className="absolute inset-0 overflow-hidden rounded-2xl [&>iframe]:h-full [&>iframe]:w-full" />
-      {!ready && <div className="absolute inset-0 flex items-center justify-center bg-[#0d1020]/90"><span className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200/70">Initializing screening room</span></div>}
-      <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-5 sm:px-5">
-        <div className="font-mono-app text-[9px] uppercase tracking-[.22em] text-cyan-200/70">Now screening</div>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-display text-lg text-white sm:text-xl">{seriesTitle}</span><span className="font-mono-app text-[10px] uppercase tracking-widest text-cyan-100/70">{episodeLabel}</span></div>
+    <div ref={shellRef} className="youtube-player-shell relative w-full bg-[#080d1a]">
+      <div className="youtube-player-video relative aspect-video w-full overflow-hidden rounded-2xl">
+        <div ref={mountRef} className="absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full" />
+        {!ready && <div className="absolute inset-0 flex items-center justify-center bg-[#0d1020]/90"><span className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200/70">Initializing screening room</span></div>}
+        <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-5 sm:px-5">
+          <div className="font-mono-app text-[9px] uppercase tracking-[.22em] text-cyan-200/70">Now screening</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-display text-lg text-white sm:text-xl">{seriesTitle}</span><span className="font-mono-app text-[10px] uppercase tracking-widest text-cyan-100/70">{episodeLabel}</span></div>
+        </div>
       </div>
-      <div className="absolute inset-x-3 bottom-2 rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:inset-x-5 sm:bottom-4 sm:p-4 sm:pb-5">
+      <div className="mt-2 rounded-2xl border border-cyan-200/20 bg-[#10152a]/90 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:mt-3 sm:p-4 sm:pb-5">
         <input aria-label="Video progress" type="range" min="0" max={Math.max(duration, 1)} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => seek(Number(event.target.value))} disabled={!ready || !duration} className="youtube-progress mb-3 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-cyan-300 disabled:cursor-not-allowed disabled:opacity-40" />
         <div className="flex items-center gap-2 text-cyan-50 sm:gap-3">
           <button type="button" onClick={togglePlayback} disabled={!ready} className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-300 text-[#07101e] transition hover:bg-cyan-200 disabled:opacity-40" aria-label={playing ? 'Pause video' : 'Play video'} data-testid="button-youtube-play">{playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}</button>
