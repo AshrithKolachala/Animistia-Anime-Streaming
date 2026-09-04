@@ -161,6 +161,124 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /shows/{showId}/seasons:
+    get:
+      operationId: listSeasons
+      tags: [catalog]
+      summary: List seasons for a series
+      parameters:
+        - name: showId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Series seasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Season"
+    post:
+      operationId: createSeason
+      tags: [admin]
+      summary: Create a season for a series
+      parameters:
+        - name: showId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeasonInput"
+      responses:
+        "201":
+          description: Created season
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+        "400":
+          description: Invalid season
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /seasons/{seasonId}/episodes:
+    get:
+      operationId: listEpisodes
+      tags: [catalog]
+      summary: List episodes in a season
+      parameters:
+        - name: seasonId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Season episodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Episode"
+    post:
+      operationId: createEpisode
+      tags: [admin]
+      summary: Add one episode to a season
+      parameters:
+        - name: seasonId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EpisodeInput"
+      responses:
+        "201":
+          description: Created episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Episode"
+        "400":
+          description: Invalid episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /episodes/{id}:
+    delete:
+      operationId: deleteEpisode
+      tags: [admin]
+      summary: Remove one episode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Episode removed
+        "404":
+          description: Episode not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /highlights:
     get:
       operationId: getHighlights
@@ -318,6 +436,9 @@ components:
     ShowSourceType:
       type: string
       enum: [uploaded, youtube]
+    MediaType:
+      type: string
+      enum: [movie, series]
     Show:
       type: object
       properties:
@@ -340,6 +461,8 @@ components:
           format: double
         episodesCount:
           type: number
+        mediaType:
+          $ref: "#/components/schemas/MediaType"
         thumbnailUrl:
           type: ["string", "null"]
         bannerUrl:
@@ -364,6 +487,7 @@ components:
         - year
         - rating
         - episodesCount
+        - mediaType
         - thumbnailUrl
         - bannerUrl
         - sourceType
@@ -390,6 +514,8 @@ components:
           format: double
         episodesCount:
           type: number
+        mediaType:
+          $ref: "#/components/schemas/MediaType"
         thumbnailUrl:
           type: ["string", "null"]
         bannerUrl:
@@ -402,7 +528,7 @@ components:
           type: ["string", "null"]
         featured:
           type: boolean
-      required: [title, synopsis, genres, year, rating, episodesCount, sourceType, featured]
+      required: [title, synopsis, genres, year, rating, episodesCount, mediaType, sourceType, featured]
     ShowUpdate:
       type: object
       properties:
@@ -422,6 +548,8 @@ components:
           format: double
         episodesCount:
           type: number
+        mediaType:
+          $ref: "#/components/schemas/MediaType"
         thumbnailUrl:
           type: ["string", "null"]
         bannerUrl:
@@ -450,6 +578,71 @@ components:
           items:
             $ref: "#/components/schemas/Show"
       required: [featured, trending, latest]
+    Season:
+      type: object
+      properties:
+        id:
+          type: number
+        showId:
+          type: number
+        seasonNumber:
+          type: number
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, showId, seasonNumber, title, createdAt]
+    SeasonInput:
+      type: object
+      properties:
+        seasonNumber:
+          type: number
+          minimum: 1
+        title:
+          type: string
+      required: [seasonNumber]
+    Episode:
+      type: object
+      properties:
+        id:
+          type: number
+        seasonId:
+          type: number
+        episodeNumber:
+          type: number
+        title:
+          type: string
+        synopsis:
+          type: string
+        sourceType:
+          $ref: "#/components/schemas/ShowSourceType"
+        videoUrl:
+          type: ["string", "null"]
+        videoPath:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, seasonId, episodeNumber, title, synopsis, sourceType, videoUrl, videoPath, createdAt]
+    EpisodeInput:
+      type: object
+      properties:
+        episodeNumber:
+          type: number
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+        synopsis:
+          type: string
+        sourceType:
+          $ref: "#/components/schemas/ShowSourceType"
+        videoUrl:
+          type: ["string", "null"]
+        videoPath:
+          type: ["string", "null"]
+      required: [episodeNumber, title, synopsis, sourceType]
     DeveloperLock:
       type: object
       properties:

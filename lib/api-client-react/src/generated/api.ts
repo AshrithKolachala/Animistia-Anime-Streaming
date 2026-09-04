@@ -24,10 +24,14 @@ import type {
   DeveloperLockInput,
   DeveloperLockVerification,
   DeveloperLockVerify,
+  Episode,
+  EpisodeInput,
   ErrorEnvelope,
   HealthStatus,
   Highlights,
   ListShowsParams,
+  Season,
+  SeasonInput,
   Show,
   ShowInput,
   ShowUpdate,
@@ -513,6 +517,375 @@ export const useDeleteShow = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getDeleteShowMutationOptions(options));
+    }
+
+export const getListSeasonsUrl = (showId: number,) => {
+
+
+
+
+  return `/api/shows/${showId}/seasons`
+}
+
+/**
+ * @summary List seasons for a series
+ */
+export const listSeasons = async (showId: number, options?: Parameters<typeof customFetch>[1]): Promise<Season[]> => {
+
+  return customFetch<Season[]>(getListSeasonsUrl(showId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSeasonsQueryKey = (showId: number,) => {
+    return [
+    `/api/shows/${showId}/seasons`
+    ] as const;
+    }
+
+
+export const getListSeasonsQueryOptions = <TData = Awaited<ReturnType<typeof listSeasons>>, TError = ErrorType<unknown>>(showId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSeasonsQueryKey(showId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSeasons>>> = ({ signal }) => listSeasons(showId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: showId !== null && showId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSeasonsQueryResult = NonNullable<Awaited<ReturnType<typeof listSeasons>>>
+export type ListSeasonsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List seasons for a series
+ */
+
+export function useListSeasons<TData = Awaited<ReturnType<typeof listSeasons>>, TError = ErrorType<unknown>>(
+ showId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSeasonsQueryOptions(showId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSeasonUrl = (showId: number,) => {
+
+
+
+
+  return `/api/shows/${showId}/seasons`
+}
+
+/**
+ * @summary Create a season for a series
+ */
+export const createSeason = async (showId: number,
+    seasonInput: SeasonInput, options?: Parameters<typeof customFetch>[1]): Promise<Season> => {
+
+  return customFetch<Season>(getCreateSeasonUrl(showId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(seasonInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSeasonMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{showId: number;data: BodyType<SeasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{showId: number;data: BodyType<SeasonInput>}, TContext> => {
+
+const mutationKey = ['createSeason'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSeason>>, {showId: number;data: BodyType<SeasonInput>}> = (props) => {
+          const {showId,data} = props ?? {};
+
+          return  createSeason(showId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSeasonMutationResult = NonNullable<Awaited<ReturnType<typeof createSeason>>>
+    export type CreateSeasonMutationBody = BodyType<SeasonInput>
+    export type CreateSeasonMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Create a season for a series
+ */
+export const useCreateSeason = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{showId: number;data: BodyType<SeasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSeason>>,
+        TError,
+        {showId: number;data: BodyType<SeasonInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSeasonMutationOptions(options));
+    }
+
+export const getListEpisodesUrl = (seasonId: number,) => {
+
+
+
+
+  return `/api/seasons/${seasonId}/episodes`
+}
+
+/**
+ * @summary List episodes in a season
+ */
+export const listEpisodes = async (seasonId: number, options?: Parameters<typeof customFetch>[1]): Promise<Episode[]> => {
+
+  return customFetch<Episode[]>(getListEpisodesUrl(seasonId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEpisodesQueryKey = (seasonId: number,) => {
+    return [
+    `/api/seasons/${seasonId}/episodes`
+    ] as const;
+    }
+
+
+export const getListEpisodesQueryOptions = <TData = Awaited<ReturnType<typeof listEpisodes>>, TError = ErrorType<unknown>>(seasonId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEpisodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEpisodesQueryKey(seasonId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEpisodes>>> = ({ signal }) => listEpisodes(seasonId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: seasonId !== null && seasonId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEpisodes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEpisodesQueryResult = NonNullable<Awaited<ReturnType<typeof listEpisodes>>>
+export type ListEpisodesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List episodes in a season
+ */
+
+export function useListEpisodes<TData = Awaited<ReturnType<typeof listEpisodes>>, TError = ErrorType<unknown>>(
+ seasonId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEpisodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEpisodesQueryOptions(seasonId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEpisodeUrl = (seasonId: number,) => {
+
+
+
+
+  return `/api/seasons/${seasonId}/episodes`
+}
+
+/**
+ * @summary Add one episode to a season
+ */
+export const createEpisode = async (seasonId: number,
+    episodeInput: EpisodeInput, options?: Parameters<typeof customFetch>[1]): Promise<Episode> => {
+
+  return customFetch<Episode>(getCreateEpisodeUrl(seasonId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(episodeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEpisodeMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEpisode>>, TError,{seasonId: number;data: BodyType<EpisodeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEpisode>>, TError,{seasonId: number;data: BodyType<EpisodeInput>}, TContext> => {
+
+const mutationKey = ['createEpisode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEpisode>>, {seasonId: number;data: BodyType<EpisodeInput>}> = (props) => {
+          const {seasonId,data} = props ?? {};
+
+          return  createEpisode(seasonId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEpisodeMutationResult = NonNullable<Awaited<ReturnType<typeof createEpisode>>>
+    export type CreateEpisodeMutationBody = BodyType<EpisodeInput>
+    export type CreateEpisodeMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Add one episode to a season
+ */
+export const useCreateEpisode = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEpisode>>, TError,{seasonId: number;data: BodyType<EpisodeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEpisode>>,
+        TError,
+        {seasonId: number;data: BodyType<EpisodeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEpisodeMutationOptions(options));
+    }
+
+export const getDeleteEpisodeUrl = (id: number,) => {
+
+
+
+
+  return `/api/episodes/${id}`
+}
+
+/**
+ * @summary Remove one episode
+ */
+export const deleteEpisode = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteEpisodeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteEpisodeMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEpisode>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEpisode>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteEpisode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEpisode>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteEpisode(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEpisodeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEpisode>>>
+
+    export type DeleteEpisodeMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Remove one episode
+ */
+export const useDeleteEpisode = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEpisode>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEpisode>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEpisodeMutationOptions(options));
     }
 
 export const getGetHighlightsUrl = () => {

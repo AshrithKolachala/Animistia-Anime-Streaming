@@ -11,6 +11,7 @@ export const showsTable = pgTable("shows", {
   year: integer("year").notNull(),
   rating: real("rating").notNull().default(0),
   episodesCount: integer("episodes_count").notNull().default(1),
+  mediaType: text("media_type", { enum: ["movie", "series"] }).notNull().default("movie"),
   thumbnailUrl: text("thumbnail_url"),
   bannerUrl: text("banner_url"),
   sourceType: text("source_type", { enum: ["uploaded", "youtube"] }).notNull(),

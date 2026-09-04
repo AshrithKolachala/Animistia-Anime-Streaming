@@ -71,17 +71,20 @@ router.post("/shows", requireClerkAuth, async (req, res): Promise<void> => {
     return;
   }
   const data = parsed.data;
-  if (data.sourceType === "youtube" && !data.videoUrl) {
+  if (data.mediaType === "movie" && data.sourceType === "youtube" && !data.videoUrl) {
     res.status(400).json({ error: "YouTube shows require a video URL" });
     return;
   }
-  if (data.sourceType === "uploaded" && !data.videoPath) {
+  if (data.mediaType === "movie" && data.sourceType === "uploaded" && !data.videoPath) {
     res.status(400).json({ error: "Uploaded shows require a video path" });
     return;
   }
   const [show] = await db.insert(showsTable).values({
     ...data,
     slug: slugify(data.title),
+    episodesCount: data.mediaType === "series" ? 0 : 1,
+    videoUrl: data.mediaType === "series" ? null : data.videoUrl,
+    videoPath: data.mediaType === "series" ? null : data.videoPath,
   }).returning();
   res.status(201).json(CreateShowResponse.parse(show));
 });
@@ -96,6 +99,18 @@ router.patch("/shows/:id", requireClerkAuth, async (req, res): Promise<void> => 
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error?.message ?? "Invalid show" });
     return;
+  }
+  if (parsed.data.mediaType === "movie" && parsed.data.sourceType === "youtube" && !parsed.data.videoUrl) {
+    res.status(400).json({ error: "YouTube movies require a video URL" });
+    return;
+  }
+  if (parsed.data.mediaType === "movie" && parsed.data.sourceType === "uploaded" && !parsed.data.videoPath) {
+    res.status(400).json({ error: "Uploaded movies require a video path" });
+    return;
+  }
+  if (parsed.data.mediaType === "series") {
+    parsed.data.videoUrl = null;
+    parsed.data.videoPath = null;
   }
   const [show] = await db.update(showsTable).set(parsed.data).where(eq(showsTable.id, params.data.id)).returning();
   if (!show) {

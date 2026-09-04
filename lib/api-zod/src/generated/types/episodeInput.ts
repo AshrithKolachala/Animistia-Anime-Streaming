@@ -5,26 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { MediaType } from './mediaType';
 import type { ShowSourceType } from './showSourceType';
 
-export interface ShowInput {
+export interface EpisodeInput {
+  /** @minimum 1 */
+  episodeNumber: number;
   /** @minLength 1 */
   title: string;
   synopsis: string;
-  genres: string[];
-  year: number;
-  rating: number;
-  episodesCount: number;
-  mediaType: MediaType;
-  /** @nullable */
-  thumbnailUrl?: string | null;
-  /** @nullable */
-  bannerUrl?: string | null;
   sourceType: ShowSourceType;
   /** @nullable */
   videoUrl?: string | null;
   /** @nullable */
   videoPath?: string | null;
-  featured: boolean;
 }

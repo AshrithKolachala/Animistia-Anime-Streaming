@@ -19,3 +19,5 @@
 
 export * from "./shows";
 export * from "./developerSettings";
+export * from "./seasons";
+export * from "./episodes";

@@ -35,6 +35,7 @@ export const ListShowsResponseItem = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -59,6 +60,7 @@ export const CreateShowBody = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullish(),
   "bannerUrl": zod.string().nullish(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -76,6 +78,7 @@ export const CreateShowResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -102,6 +105,7 @@ export const GetShowResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -129,6 +133,7 @@ export const UpdateShowBody = zod.object({
   "year": zod.number().optional(),
   "rating": zod.number().optional(),
   "episodesCount": zod.number().optional(),
+  "mediaType": zod.enum(['movie', 'series']).optional(),
   "thumbnailUrl": zod.string().nullish(),
   "bannerUrl": zod.string().nullish(),
   "sourceType": zod.enum(['uploaded', 'youtube']).optional(),
@@ -146,6 +151,7 @@ export const UpdateShowResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -167,6 +173,111 @@ export const DeleteShowResponse = zod.void()
 
 
 /**
+ * @summary List seasons for a series
+ */
+export const ListSeasonsParams = zod.object({
+  "showId": zod.coerce.number()
+})
+
+export const ListSeasonsResponseItem = zod.object({
+  "id": zod.number(),
+  "showId": zod.number(),
+  "seasonNumber": zod.number(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListSeasonsResponse = zod.array(ListSeasonsResponseItem)
+
+
+/**
+ * @summary Create a season for a series
+ */
+export const CreateSeasonParams = zod.object({
+  "showId": zod.coerce.number()
+})
+
+
+
+
+export const CreateSeasonBody = zod.object({
+  "seasonNumber": zod.number().min(1),
+  "title": zod.string().optional()
+})
+
+export const CreateSeasonResponse = zod.object({
+  "id": zod.number(),
+  "showId": zod.number(),
+  "seasonNumber": zod.number(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List episodes in a season
+ */
+export const ListEpisodesParams = zod.object({
+  "seasonId": zod.coerce.number()
+})
+
+export const ListEpisodesResponseItem = zod.object({
+  "id": zod.number(),
+  "seasonId": zod.number(),
+  "episodeNumber": zod.number(),
+  "title": zod.string(),
+  "synopsis": zod.string(),
+  "sourceType": zod.enum(['uploaded', 'youtube']),
+  "videoUrl": zod.string().nullable(),
+  "videoPath": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEpisodesResponse = zod.array(ListEpisodesResponseItem)
+
+
+/**
+ * @summary Add one episode to a season
+ */
+export const CreateEpisodeParams = zod.object({
+  "seasonId": zod.coerce.number()
+})
+
+
+
+
+
+export const CreateEpisodeBody = zod.object({
+  "episodeNumber": zod.number().min(1),
+  "title": zod.string().min(1),
+  "synopsis": zod.string(),
+  "sourceType": zod.enum(['uploaded', 'youtube']),
+  "videoUrl": zod.string().nullish(),
+  "videoPath": zod.string().nullish()
+})
+
+export const CreateEpisodeResponse = zod.object({
+  "id": zod.number(),
+  "seasonId": zod.number(),
+  "episodeNumber": zod.number(),
+  "title": zod.string(),
+  "synopsis": zod.string(),
+  "sourceType": zod.enum(['uploaded', 'youtube']),
+  "videoUrl": zod.string().nullable(),
+  "videoPath": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove one episode
+ */
+export const DeleteEpisodeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEpisodeResponse = zod.void()
+
+
+/**
  * @summary Get featured catalog highlights
  */
 export const GetHighlightsResponse = zod.object({
@@ -179,6 +290,7 @@ export const GetHighlightsResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -196,6 +308,7 @@ export const GetHighlightsResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),
@@ -213,6 +326,7 @@ export const GetHighlightsResponse = zod.object({
   "year": zod.number(),
   "rating": zod.number(),
   "episodesCount": zod.number(),
+  "mediaType": zod.enum(['movie', 'series']),
   "thumbnailUrl": zod.string().nullable(),
   "bannerUrl": zod.string().nullable(),
   "sourceType": zod.enum(['uploaded', 'youtube']),

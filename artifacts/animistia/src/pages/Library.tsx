@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bookmark, Clock3, Play, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { useListShows } from '@workspace/api-client-react';
 import { Shell, SectionHeading } from '@/components/AnimistiaShell';
 import { ShowCard } from '@/components/ShowCard';
 import { demoShows } from '@/lib/catalog';
 
 export default function Library() {
+  const shows = useListShows();
+  const catalog = shows.data?.length ? shows.data : demoShows;
   const [savedIds, setSavedIds] = useState<number[]>(() => demoShows.filter((show) => localStorage.getItem(`animistia-saved-${show.id}`) === '1').map((show) => show.id));
-  const saved = useMemo(() => demoShows.filter((show) => savedIds.includes(show.id)), [savedIds]);
+  useEffect(() => { setSavedIds(catalog.filter((show) => localStorage.getItem(`animistia-saved-${show.id}`) === '1').map((show) => show.id)); }, [catalog]);
+  const saved = useMemo(() => catalog.filter((show) => savedIds.includes(show.id)), [catalog, savedIds]);
   const remove = (id: number) => { localStorage.removeItem(`animistia-saved-${id}`); setSavedIds((ids) => ids.filter((savedId) => savedId !== id)); };
   return <Shell><div className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 lg:px-12"><div className="animate-rise"><div className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Your space / private archive</div><h1 className="mt-3 font-display text-6xl leading-[.9] tracking-[-.04em] sm:text-8xl">Keep the good stuff close.</h1><p className="mt-6 max-w-md text-sm leading-6 text-muted-foreground">Your saved discoveries, gathered in one quiet corner.</p></div>
     <div className="mt-14 grid gap-4 sm:grid-cols-3"><Stat icon={<Bookmark size={16} />} label="Saved titles" value={saved.length.toString().padStart(2, '0')} /><Stat icon={<Clock3 size={16} />} label="Time waiting" value={saved.length ? `${saved.length * 4}h` : '—'} /><Stat icon={<Play size={16} />} label="Next up" value={saved[0]?.title ?? 'Choose one'} /></div>

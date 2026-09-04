@@ -21,6 +21,14 @@ export const ShowSourceType = {
   youtube: 'youtube',
 } as const;
 
+export type MediaType = typeof MediaType[keyof typeof MediaType];
+
+
+export const MediaType = {
+  movie: 'movie',
+  series: 'series',
+} as const;
+
 export interface Show {
   id: number;
   title: string;
@@ -30,6 +38,7 @@ export interface Show {
   year: number;
   rating: number;
   episodesCount: number;
+  mediaType: MediaType;
   /** @nullable */
   thumbnailUrl: string | null;
   /** @nullable */
@@ -51,6 +60,7 @@ export interface ShowInput {
   year: number;
   rating: number;
   episodesCount: number;
+  mediaType: MediaType;
   /** @nullable */
   thumbnailUrl?: string | null;
   /** @nullable */
@@ -71,6 +81,7 @@ export interface ShowUpdate {
   year?: number;
   rating?: number;
   episodesCount?: number;
+  mediaType?: MediaType;
   /** @nullable */
   thumbnailUrl?: string | null;
   /** @nullable */
@@ -87,6 +98,47 @@ export interface Highlights {
   featured: Show[];
   trending: Show[];
   latest: Show[];
+}
+
+export interface Season {
+  id: number;
+  showId: number;
+  seasonNumber: number;
+  title: string;
+  createdAt: string;
+}
+
+export interface SeasonInput {
+  /** @minimum 1 */
+  seasonNumber: number;
+  title?: string;
+}
+
+export interface Episode {
+  id: number;
+  seasonId: number;
+  episodeNumber: number;
+  title: string;
+  synopsis: string;
+  sourceType: ShowSourceType;
+  /** @nullable */
+  videoUrl: string | null;
+  /** @nullable */
+  videoPath: string | null;
+  createdAt: string;
+}
+
+export interface EpisodeInput {
+  /** @minimum 1 */
+  episodeNumber: number;
+  /** @minLength 1 */
+  title: string;
+  synopsis: string;
+  sourceType: ShowSourceType;
+  /** @nullable */
+  videoUrl?: string | null;
+  /** @nullable */
+  videoPath?: string | null;
 }
 
 export interface DeveloperLock {

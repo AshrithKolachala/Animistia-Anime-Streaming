@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MediaType } from './mediaType';
 import type { ShowSourceType } from './showSourceType';
 
 export interface ShowUpdate {
@@ -15,6 +16,7 @@ export interface ShowUpdate {
   year?: number;
   rating?: number;
   episodesCount?: number;
+  mediaType?: MediaType;
   /** @nullable */
   thumbnailUrl?: string | null;
   /** @nullable */
