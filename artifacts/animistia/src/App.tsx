@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { ClerkProvider, useAuth } from '@clerk/react';
+import { ClerkProvider, useAuth, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -29,7 +29,7 @@ function Routes({ clerkReady }: { clerkReady: boolean }) {
     <Route path="/browse" component={Browse} />
     <Route path="/watch/:id" component={Watch} />
     <Route path="/library" component={() => <ProtectedPage clerkReady={clerkReady}><Library /></ProtectedPage>} />
-    <Route path="/admin" component={() => <ProtectedPage clerkReady={clerkReady}><Admin /></ProtectedPage>} />
+    <Route path="/admin" component={() => <ProtectedPage clerkReady={clerkReady}><AdminGate /></ProtectedPage>} />
     <Route path="/sign-in/*?" component={() => <AuthPage mode="sign-in" clerkReady={clerkReady} />} />
     <Route path="/sign-up/*?" component={() => <AuthPage mode="sign-up" clerkReady={clerkReady} />} />
     <Route component={NotFound} />
@@ -42,6 +42,17 @@ function ProtectedPage({ clerkReady, children }: { clerkReady: boolean; children
   if (!isLoaded) return <div className="min-h-[100dvh] bg-background" />;
   if (!isSignedIn) return <Redirect to="/sign-in" />;
   return <>{children}</>;
+}
+
+function AdminGate() {
+  const { isLoaded, user } = useUser();
+  if (!isLoaded) return <div className="min-h-[100dvh] bg-background" />;
+
+  const email = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase();
+  if (email !== 'adityashiva19912021@gmail.com') {
+    return <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5"><div className="max-w-md rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-8 text-center shadow-[0_0_50px_rgba(44,226,255,.08)] backdrop-blur-xl"><div className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200">Restricted screening room</div><h1 className="mt-3 font-display text-4xl">Admin access only.</h1><p className="mt-4 text-sm leading-6 text-muted-foreground">This account is signed in, but it is not authorized to manage the Animistia catalog.</p><a href={basePath || '/'} className="mt-7 inline-flex rounded-full border border-cyan-200/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-cyan-100 transition hover:bg-cyan-200/10">Return home</a></div></div>;
+  }
+  return <Admin />;
 }
 
 export default function App() {

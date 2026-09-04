@@ -5,7 +5,7 @@ import {
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
 
-import { requireClerkAuth } from '../middlewares/auth';
+import { requireAdminClerkAuth } from '../middlewares/auth';
 import {
   ObjectNotFoundError,
   ObjectStorageService,
@@ -24,7 +24,7 @@ const objectStorageService = new ObjectStorageService();
  */
 router.post(
   '/storage/uploads/request-url',
-  requireClerkAuth,
+  requireAdminClerkAuth,
   async (req: Request, res: Response) => {
     const parsed = RequestUploadUrlBody.safeParse(req.body);
     if (!parsed.success) {

@@ -14,7 +14,7 @@ import {
   UpdateShowResponse,
 } from "@workspace/api-zod";
 import { db, showsTable } from "@workspace/db";
-import { requireClerkAuth } from "../middlewares/auth";
+import { requireAdminClerkAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -64,7 +64,7 @@ router.get("/highlights", async (_req, res): Promise<void> => {
   }));
 });
 
-router.post("/shows", requireClerkAuth, async (req, res): Promise<void> => {
+router.post("/shows", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const parsed = CreateShowBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -89,7 +89,7 @@ router.post("/shows", requireClerkAuth, async (req, res): Promise<void> => {
   res.status(201).json(CreateShowResponse.parse(show));
 });
 
-router.patch("/shows/:id", requireClerkAuth, async (req, res): Promise<void> => {
+router.patch("/shows/:id", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const params = UpdateShowParams.safeParse(req.params);
   const parsed = UpdateShowBody.safeParse(req.body);
   if (!params.success) {
@@ -120,7 +120,7 @@ router.patch("/shows/:id", requireClerkAuth, async (req, res): Promise<void> => 
   res.json(UpdateShowResponse.parse(show));
 });
 
-router.delete("/shows/:id", requireClerkAuth, async (req, res): Promise<void> => {
+router.delete("/shows/:id", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const params = DeleteShowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -8,7 +8,7 @@ import {
   ListSeasonsResponse,
 } from "@workspace/api-zod";
 import { db, seasonsTable, showsTable } from "@workspace/db";
-import { requireClerkAuth } from "../middlewares/auth";
+import { requireAdminClerkAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -24,7 +24,7 @@ router.get("/shows/:showId/seasons", async (req, res): Promise<void> => {
   res.json(ListSeasonsResponse.parse(rows));
 });
 
-router.post("/shows/:showId/seasons", requireClerkAuth, async (req, res): Promise<void> => {
+router.post("/shows/:showId/seasons", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const params = CreateSeasonParams.safeParse(req.params);
   const body = CreateSeasonBody.safeParse(req.body);
   if (!params.success || !body.success) {

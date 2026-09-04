@@ -9,7 +9,7 @@ import {
   ListEpisodesResponse,
 } from "@workspace/api-zod";
 import { db, episodesTable, seasonsTable, showsTable } from "@workspace/db";
-import { requireClerkAuth } from "../middlewares/auth";
+import { requireAdminClerkAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -25,7 +25,7 @@ router.get("/seasons/:seasonId/episodes", async (req, res): Promise<void> => {
   res.json(ListEpisodesResponse.parse(rows));
 });
 
-router.post("/seasons/:seasonId/episodes", requireClerkAuth, async (req, res): Promise<void> => {
+router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const params = CreateEpisodeParams.safeParse(req.params);
   const body = CreateEpisodeBody.safeParse(req.body);
   if (!params.success || !body.success) {
@@ -73,7 +73,7 @@ router.post("/seasons/:seasonId/episodes", requireClerkAuth, async (req, res): P
   }
 });
 
-router.delete("/episodes/:id", requireClerkAuth, async (req, res): Promise<void> => {
+router.delete("/episodes/:id", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const params = DeleteEpisodeParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

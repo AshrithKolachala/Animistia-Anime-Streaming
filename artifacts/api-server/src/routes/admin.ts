@@ -9,7 +9,7 @@ import {
 } from "@workspace/api-zod";
 import { db, developerSettingsTable } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/password";
-import { requireClerkAuth } from "../middlewares/auth";
+import { requireAdminClerkAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -20,7 +20,7 @@ async function getSettings() {
   return created;
 }
 
-router.get("/admin/lock", requireClerkAuth, async (_req, res): Promise<void> => {
+router.get("/admin/lock", requireAdminClerkAuth, async (_req, res): Promise<void> => {
   const settings = await getSettings();
   res.json(GetDeveloperLockResponse.parse({
     enabled: settings.lockEnabled,
@@ -28,7 +28,7 @@ router.get("/admin/lock", requireClerkAuth, async (_req, res): Promise<void> => 
   }));
 });
 
-router.put("/admin/lock", requireClerkAuth, async (req, res): Promise<void> => {
+router.put("/admin/lock", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const parsed = UpdateDeveloperLockBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -46,7 +46,7 @@ router.put("/admin/lock", requireClerkAuth, async (req, res): Promise<void> => {
   }));
 });
 
-router.post("/admin/lock/verify", requireClerkAuth, async (req, res): Promise<void> => {
+router.post("/admin/lock/verify", requireAdminClerkAuth, async (req, res): Promise<void> => {
   const parsed = VerifyDeveloperLockBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
