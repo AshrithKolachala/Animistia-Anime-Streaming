@@ -25,3 +25,9 @@ export function getVideoId(url?: string | null) {
   const match = url.match(/(?:v=|youtu\.be\/|embed\/)([^?&/]+)/);
   return match?.[1] ?? '';
 }
+
+export function getAssetUrl(path?: string | null) {
+  if (!path) return '';
+  if (/^(https?:)?\/\//.test(path)) return path;
+  return `/api/storage/objects/${path.replace(/^\/objects\//, '')}`;
+}

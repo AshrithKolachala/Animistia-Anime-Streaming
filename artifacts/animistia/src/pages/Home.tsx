@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useGetHighlights } from '@workspace/api-client-react';
 import { SectionHeading, LoadingGrid, Shell } from '@/components/AnimistiaShell';
 import { ShowCard } from '@/components/ShowCard';
-import { demoShows } from '@/lib/catalog';
+import { demoShows, getAssetUrl } from '@/lib/catalog';
 
 export default function Home() {
   const highlights = useGetHighlights();
@@ -13,7 +13,7 @@ export default function Home() {
   return (
     <Shell><div>
       <section className="relative min-h-[620px] overflow-hidden border-b border-white/[.07] sm:min-h-[690px]">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 72% 28%, rgba(177, 106, 97, .25), transparent 38%), radial-gradient(ellipse at 18% 10%, rgba(235, 195, 120, .13), transparent 34%), linear-gradient(115deg, #15151d 5%, #1d1a27 52%, #302735 100%)' }} />
+         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 72% 28%, rgba(177, 106, 97, .25), transparent 38%), radial-gradient(ellipse at 18% 10%, rgba(235, 195, 120, .13), transparent 34%), linear-gradient(115deg, #15151d 5%, #1d1a27 52%, #302735 100%)' }} />{featured.bannerUrl && <img src={getAssetUrl(featured.bannerUrl)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-screen" />}
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0 49.8%, rgba(247,230,198,.2) 50%, transparent 50.2%), linear-gradient(0deg, transparent 0 49.8%, rgba(247,230,198,.2) 50%, transparent 50.2%)', backgroundSize: '110px 110px' }} />
         <div className="relative mx-auto flex min-h-[620px] max-w-[1440px] items-end px-5 pb-16 sm:min-h-[690px] sm:px-8 sm:pb-20 lg:px-12">
           <div className="max-w-2xl animate-rise">

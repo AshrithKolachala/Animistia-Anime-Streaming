@@ -9,7 +9,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Episode, MediaType, Show, ShowInput, ShowSourceType } from '@workspace/api-client-react';
 import { Shell } from '@/components/AnimistiaShell';
-import { demoShows } from '@/lib/catalog';
+import { demoShows, getAssetUrl } from '@/lib/catalog';
 
 const emptyForm: ShowInput = { title: '', synopsis: '', genres: [], year: new Date().getFullYear(), rating: 4.2, episodesCount: 1, mediaType: 'movie', thumbnailUrl: null, bannerUrl: null, sourceType: 'uploaded', videoUrl: null, videoPath: null, featured: false };
 
@@ -44,7 +44,7 @@ export default function Admin() {
   const [lockPassword, setLockPassword] = useState('');
   const [verifyPassword, setVerifyPassword] = useState('');
   const [verified, setVerified] = useState(false);
-  const [uploading, setUploading] = useState<'movie' | 'episode' | null>(null);
+  const [uploading, setUploading] = useState<'movie' | 'episode' | 'portrait' | 'landscape' | null>(null);
   const lock = lockQuery.data;
   const needsUnlock = Boolean(lock?.enabled && lock.configured && !verified);
   const isBusy = createShow.isPending || updateShow.isPending || createSeason.isPending || createEpisode.isPending;
@@ -119,19 +119,21 @@ export default function Admin() {
     });
   };
 
-  const uploadFile = (kind: 'movie' | 'episode') => async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadFile = (kind: 'movie' | 'episode' | 'portrait' | 'landscape') => async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     setUploading(kind);
     setNotice('Preparing secure upload...');
-    requestUpload.mutate({ data: { name: file.name, size: file.size, contentType: file.type || 'video/mp4' } }, {
+    const isImage = kind === 'portrait' || kind === 'landscape';
+    requestUpload.mutate({ data: { name: file.name, size: file.size, contentType: file.type || (isImage ? 'image/png' : 'video/mp4') } }, {
       onSuccess: async (response) => {
         try {
-          const result = await fetch(response.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || 'video/mp4' }, body: file });
+          const result = await fetch(response.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || (isImage ? 'image/png' : 'video/mp4') }, body: file });
           if (!result.ok) throw new Error('upload');
           if (kind === 'movie') setForm((current) => ({ ...current, sourceType: 'uploaded', videoPath: response.objectPath, videoUrl: null }));
-          else setEpisode((current) => ({ ...current, sourceType: 'uploaded', videoPath: response.objectPath, videoUrl: null }));
-          setNotice(`${kind === 'movie' ? 'Movie' : 'Episode'} upload complete. Save it to publish.`);
+          else if (kind === 'episode') setEpisode((current) => ({ ...current, sourceType: 'uploaded', videoPath: response.objectPath, videoUrl: null }));
+          else setForm((current) => ({ ...current, [kind === 'portrait' ? 'thumbnailUrl' : 'bannerUrl']: response.objectPath }));
+          setNotice(`${kind === 'movie' ? 'Movie' : kind === 'episode' ? 'Episode' : kind === 'portrait' ? 'Portrait logo' : 'Landscape logo'} upload complete. Save it to publish.`);
         } catch { setNotice('Upload failed. Please try the file again.'); }
         finally { setUploading(null); }
       },
@@ -159,7 +161,8 @@ export default function Admin() {
             <div className="grid grid-cols-2 gap-2"><TypeChoice value="movie" selected={form.mediaType} onChange={(value) => setForm({ ...form, mediaType: value, sourceType: value === 'movie' ? 'uploaded' : 'youtube', videoUrl: null, videoPath: null })} icon={<Film size={16} />} label="Movie" /><TypeChoice value="series" selected={form.mediaType} onChange={(value) => setForm({ ...form, mediaType: value, sourceType: 'youtube', videoUrl: null, videoPath: null, episodesCount: 0 })} icon={<Layers3 size={16} />} label="Series" /></div>
             <Field label="Title"><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. The Glass Garden" className="admin-input" /></Field>
             <Field label="Synopsis"><textarea required rows={4} value={form.synopsis} onChange={(e) => setForm({ ...form, synopsis: e.target.value })} placeholder="What stays with the viewer?" className="admin-input resize-none" /></Field>
-            <div className="grid gap-4 sm:grid-cols-3"><Field label="Year"><input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: Number(e.target.value) })} className="admin-input" /></Field><Field label="Rating"><input type="number" min="0" max="10" step=".1" value={form.rating} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} className="admin-input" /></Field><Field label="Genres"><input value={genresText} onChange={(e) => setGenresText(e.target.value)} placeholder="Drama, Fantasy" className="admin-input" /></Field></div>
+             <div className="grid gap-4 sm:grid-cols-3"><Field label="Year"><input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: Number(e.target.value) })} className="admin-input" /></Field><Field label="Rating"><input type="number" min="0" max="10" step=".1" value={form.rating} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} className="admin-input" /></Field><Field label="Genres"><input value={genresText} onChange={(e) => setGenresText(e.target.value)} placeholder="Drama, Fantasy" className="admin-input" /></Field></div>
+             <div className="grid gap-4 sm:grid-cols-2"><ImagePicker label="Portrait logo / card art" value={form.thumbnailUrl} uploading={uploading === 'portrait'} onChange={uploadFile('portrait')} /><ImagePicker label="Landscape logo / hero art" value={form.bannerUrl} uploading={uploading === 'landscape'} onChange={uploadFile('landscape')} /></div>
             <Field label="Featured"><label className="flex h-11 items-center gap-3 rounded-lg border border-white/10 bg-[#121218] px-3 text-xs text-muted-foreground"><input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} className="accent-[hsl(var(--primary))]" /> Place in hero spotlight</label></Field>
             {form.mediaType === 'movie' && <><Field label="Movie source"><select value={form.sourceType} onChange={(e) => setForm({ ...form, sourceType: e.target.value as ShowSourceType, videoUrl: null, videoPath: null })} className="admin-input"><option value="uploaded">Upload video</option><option value="youtube">YouTube URL</option></select></Field>{form.sourceType === 'youtube' ? <Field label="YouTube URL"><input required value={form.videoUrl ?? ''} onChange={(e) => setForm({ ...form, videoUrl: e.target.value, videoPath: null })} placeholder="https://youtube.com/watch?v=..." className="admin-input" /></Field> : <VideoPicker value={Boolean(form.videoPath)} uploading={uploading === 'movie'} onChange={uploadFile('movie')} />}</>}
             <button disabled={isBusy || Boolean(uploading)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50">{isBusy ? 'Saving...' : selectedShowId ? <><Save size={14} /> Save changes</> : <><Plus size={14} /> Create {form.mediaType}</>}</button>
@@ -213,6 +216,10 @@ function TypeChoice({ value, selected, onChange, icon, label }: { value: MediaTy
 
 function VideoPicker({ value, uploading, onChange }: { value: boolean; uploading: boolean; onChange: (event: React.ChangeEvent<HTMLInputElement>) => void }) {
   return <div><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Video file</label><label className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-4 transition hover:bg-primary/10"><span className="flex items-center gap-3 text-sm">{uploading ? <CloudUpload className="animate-pulse text-primary" size={19} /> : <Upload className="text-primary" size={19} />}{value ? 'Uploaded and ready' : 'Choose one MP4, WebM, or MOV'}</span><span className="rounded-full border border-primary/30 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">{uploading ? 'Uploading' : 'Browse'}</span><input type="file" accept="video/*" onChange={onChange} className="hidden" /></label></div>;
+}
+
+function ImagePicker({ label, value, uploading, onChange }: { label: string; value?: string | null; uploading: boolean; onChange: (event: React.ChangeEvent<HTMLInputElement>) => void }) {
+  return <div><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</label><label className="group relative flex min-h-28 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-cyan-200/25 bg-[#0e1424] transition hover:border-cyan-200/60">{value && <img src={getAssetUrl(value)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55 transition group-hover:opacity-35" />}<span className="relative z-10 rounded-full border border-cyan-100/30 bg-[#0e1424]/75 px-3 py-2 font-mono-app text-[9px] uppercase tracking-widest text-cyan-100 backdrop-blur">{uploading ? 'Uploading…' : value ? 'Replace image' : 'Choose image'}</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={onChange} className="hidden" /></label></div>;
 }
 
 function LockPanel({ lock, password, setPassword, onSave, verifyPassword, setVerifyPassword, onVerify, verified, onToggle, pending }: { lock?: { enabled: boolean; configured: boolean }; password: string; setPassword: (value: string) => void; onSave: (event: React.FormEvent) => void; verifyPassword: string; setVerifyPassword: (value: string) => void; onVerify: (event: React.FormEvent) => void; verified: boolean; onToggle: () => void; pending: boolean }) {
