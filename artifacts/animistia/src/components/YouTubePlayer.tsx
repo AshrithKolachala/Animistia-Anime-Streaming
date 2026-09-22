@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Captions, Maximize, Pause, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { Link } from 'wouter';
+
 
 type YouTubePlayerState = {
   getCurrentTime: () => number;
@@ -87,7 +89,7 @@ function parseVtt(text: string): CaptionCue[] {
   return cues.filter((cue) => cue.text);
 }
 
-export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, captionsText }: { videoId: string; title: string; seriesTitle: string; episodeLabel: string; captionsText?: string | null }) {
+export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, captionsText, onNextEpisode, mediaType }: { videoId: string; title: string; seriesTitle: string; episodeLabel: string; captionsText?: string | null; onNextEpisode?: () => void; mediaType?: string }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayerState | null>(null);
@@ -99,6 +101,8 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, capti
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const captionCues = useMemo(() => (captionsText ? parseVtt(captionsText) : []), [captionsText]);
   const activeCaption = useMemo(() => captionCues.find((cue) => currentTime >= cue.start && currentTime <= cue.end), [captionCues, currentTime]);
+  const [showNextEpOverlay, setShowNextEpOverlay] = useState(false);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +166,40 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, capti
     return () => window.clearInterval(timer);
   }, [ready]);
 
+  //-----LAST 12 SECONDS CUT[START]-----//
+  
+  useEffect(() => {
+    if (!ready || showNextEpOverlay) return;
+
+    const timer = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
+
+      const time = player.getCurrentTime();
+      const videoDuration = player.getDuration();
+
+      setCurrentTime(time);
+      setDuration(videoDuration);
+
+      // 🚀 DYNAMIC THRESHOLD: 5 seconds for movies, 12 seconds for series
+      const secondsBeforeEnd = mediaType === 'movie' ? 5 : 12;
+
+      // Check if the video has hit the calculated end mark
+      if (videoDuration > 0 && time >= (videoDuration - secondsBeforeEnd)) {
+        player.pauseVideo();         // Freeze the feed safely
+        setPlaying(false);           // Update UI play states
+        setShowNextEpOverlay(true);  // Display our custom popup card layout
+        window.clearInterval(timer); // Shut down timer instance
+      }
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [ready, duration, playing, showNextEpOverlay, mediaType]);
+
+
+  //-----LAST 12 SECONDS CUT[END]-----//
+
+
   const togglePlayback = () => {
     const player = playerRef.current;
     if (!player) return;
@@ -197,12 +235,15 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, capti
     <div ref={shellRef} className="youtube-player-shell absolute inset-0 bg-[#080d1a]">
       <div ref={mountRef} className="absolute inset-0 overflow-hidden rounded-2xl [&>iframe]:h-full [&>iframe]:w-full" />
       {!ready && <div className="absolute inset-0 flex items-center justify-center bg-[#0d1020]/90"><span className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200/70">Initializing screening room</span></div>}
-      <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-5 sm:px-5">
+      <div className="pointer-events-auto absolute inset-x-3 top-3 rounded-2xl px-4 py-3 sm:inset-x-0 sm:top-0 sm:px-0"></div>
+
+
+      <div className="pointer-events-auto absolute inset-x-3 top-3 rounded-2xl border border-cyan-200/20 bg-[#10152a]/70 px-4 py-3 shadow-[0_0_30px_rgba(44,226,255,.1)] backdrop-blur-xl sm:inset-x-5 sm:top-3 sm:px-5">
         <div className="font-mono-app text-[9px] uppercase tracking-[.22em] text-cyan-200/70">Now screening</div>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-display text-lg text-white sm:text-xl">{seriesTitle}</span><span className="font-mono-app text-[10px] uppercase tracking-widest text-cyan-100/70">{episodeLabel}</span></div>
       </div>
       {captionsEnabled && activeCaption && <div className="pointer-events-none absolute inset-x-5 bottom-28 z-20 flex justify-center text-center sm:bottom-32"><span className="max-w-[85%] rounded-lg bg-black/75 px-4 py-2 text-sm font-medium leading-6 text-white shadow-lg backdrop-blur-sm sm:text-base">{activeCaption.text}</span></div>}
-      <div className="absolute inset-x-3 bottom-2 rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:inset-x-5 sm:bottom-4 sm:p-4 sm:pb-5">
+      <div className="absolute inset-x-3 bottom-1 rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-3 pb-4 shadow-[0_0_30px_rgba(44,226,255,.14)] backdrop-blur-xl sm:inset-x-5 sm:bottom-2 sm:p-4 sm:pb-5">
         <input aria-label="Video progress" type="range" min="0" max={Math.max(duration, 1)} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => seek(Number(event.target.value))} disabled={!ready || !duration} className="youtube-progress mb-3 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-cyan-300 disabled:cursor-not-allowed disabled:opacity-40" />
         <div className="flex items-center gap-2 text-cyan-50 sm:gap-3">
           <button type="button" onClick={togglePlayback} disabled={!ready} className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-300 text-[#07101e] transition hover:bg-cyan-200 disabled:opacity-40" aria-label={playing ? 'Pause video' : 'Play video'} data-testid="button-youtube-play">{playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}</button>
@@ -213,6 +254,55 @@ export function YouTubePlayer({ videoId, title, seriesTitle, episodeLabel, capti
           <button type="button" onClick={fullscreen} disabled={!ready} className="hidden h-8 w-8 items-center justify-center rounded-full text-cyan-100/80 transition hover:bg-cyan-200/10 hover:text-cyan-100 sm:flex" aria-label="Fullscreen video"><Maximize size={15} /></button>
         </div>
       </div>
+      {/*-----NEXT EPISODE OVERLAY[START]-----*/}
+      {/* 🎬 ANIMISTIA NEXT EPISODE POPUP OVERLAY */}
+      {showNextEpOverlay && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 px-6 animate-fade-in text-center backdrop-blur-md">
+          <div className="max-w-md rounded-2xl border border-cyan-400/20 bg-[#10152a]/90 p-8 shadow-[0_0_50px_rgba(44,226,255,0.15)]">
+            <div className="font-mono-app text-xs uppercase tracking-[0.25em] text-cyan-300">Finished Presentation</div>
+            <h3 className="mt-2 font-display text-2xl font-bold text-white">Thanks for watching!</h3>
+            <p className="mt-2 text-sm text-cyan-100/60">Ready to find out what happens next in the story?</p>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              {/* Conditional Button: Shows 'Next Episode' for series, 'Browse' for movies */}
+              {mediaType === 'movie' ? (
+                <Link href="/browse" className="rounded-full bg-cyan-300 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#07101e] transition hover:bg-cyan-200 text-center no-underline">
+                  Browse Archive ➔
+                </Link>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowNextEpOverlay(false);
+                    if (onNextEpisode) onNextEpisode();
+                  }}
+                  className="rounded-full bg-cyan-300 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#07101e] transition hover:bg-cyan-200"
+                >
+                  Next Episode ➔
+                </button>
+              )}
+
+              {/* Replay Episode Button */}
+              <button 
+                type="button"
+                onClick={() => {
+                  setCurrentTime(0);
+                  setShowNextEpOverlay(false);
+                  playerRef.current?.seekTo(0, true);
+                  playerRef.current?.playVideo();
+                  setPlaying(true);
+                }}
+                className="rounded-full border border-white/10 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-white/5"
+              >
+                Replay
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/*-----NEXT EPISODE OVERLAY[END]-----*/}
     </div>
   );
 }

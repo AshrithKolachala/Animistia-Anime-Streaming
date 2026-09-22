@@ -24,16 +24,27 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function Routes({ clerkReady }: { clerkReady: boolean }) {
-  return <RoutedErrorBoundary><Switch>
-    <Route path="/" component={Home} />
-    <Route path="/browse" component={Browse} />
-    <Route path="/watch/:id" component={Watch} />
-    <Route path="/library" component={() => <ProtectedPage clerkReady={clerkReady}><Library /></ProtectedPage>} />
-    <Route path="/admin" component={() => <ProtectedPage clerkReady={clerkReady}><AdminGate /></ProtectedPage>} />
-    <Route path="/sign-in/*?" component={() => <AuthPage mode="sign-in" clerkReady={clerkReady} />} />
-    <Route path="/sign-up/*?" component={() => <AuthPage mode="sign-up" clerkReady={clerkReady} />} />
-    <Route component={NotFound} />
-  </Switch></RoutedErrorBoundary>;
+  return (
+    <RoutedErrorBoundary>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/browse" component={Browse} />
+
+        {/* 🎬 ANIMISTIA PREMIUM URL PATH SEGMENTS */}
+        <Route path="/watch/series/:name/:season/:episode" component={Watch} />
+        <Route path="/watch/movies/:name" component={Watch} />
+
+        {/* Keep the fallback ID parser path temporarily so existing home dashboard cards don't throw immediate errors while you transition */}
+        <Route path="/watch/:id" component={Watch} />
+
+        <Route path="/library" component={() => <ProtectedPage clerkReady={clerkReady}><Library /></ProtectedPage>} />
+        <Route path="/admin" component={() => <ProtectedPage clerkReady={clerkReady}><AdminGate /></ProtectedPage>} />
+        <Route path="/sign-in/*?" component={() => <AuthPage mode="sign-in" clerkReady={clerkReady} />} />
+        <Route path="/sign-up/*?" component={() => <AuthPage mode="sign-up" clerkReady={clerkReady} />} />
+        <Route component={NotFound} />
+      </Switch>
+    </RoutedErrorBoundary>
+  );
 }
 
 function ProtectedPage({ clerkReady, children }: { clerkReady: boolean; children: ReactNode }) {

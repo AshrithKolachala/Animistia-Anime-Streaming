@@ -4,8 +4,13 @@ import type { Show } from '@workspace/api-client-react';
 import { coverStyle, getAssetUrl } from '@/lib/catalog';
 
 export function ShowCard({ show, featured = false }: { show: Show; featured?: boolean }) {
+  // 🌐 GENERATE PREMIUM SEARCH ENGINE OPTIMIZED ROUTE PATHS
+  const targetUrl = show.mediaType === 'series'
+    ? `/watch/series/${show.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')}/1/1`
+    : `/watch/movies/${show.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')}`;
+
   return (
-    <Link href={`/watch/${show.id}`} className={`group block ${featured ? 'sm:col-span-2' : ''}`} data-testid={`card-show-${show.id}`}>
+    <Link href={targetUrl} className={`group block ${featured ? 'sm:col-span-2' : ''}`} data-testid={`card-show-${show.id}`}>
       <div className={`relative overflow-hidden rounded-xl border border-white/[.08] bg-secondary ${featured ? 'aspect-[1.2]' : 'aspect-[.72]'}`}>
         {show.thumbnailUrl ? <img src={getAssetUrl(show.thumbnailUrl)} alt={show.title} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" /> : <div className="absolute inset-0" style={coverStyle(show.id)}><div className="absolute inset-0 opacity-35" style={{ background: 'repeating-linear-gradient(130deg, transparent 0 17px, rgba(255,255,255,.08) 18px 19px)' }} /><span className={`absolute ${featured ? 'bottom-5 left-5 text-5xl' : 'bottom-3 left-3 text-3xl'} font-display italic text-white/80`}>{show.title.slice(0, 1)}</span></div>}
         <div className="absolute inset-0 bg-gradient-to-t from-[#101016] via-transparent to-transparent opacity-80" />
