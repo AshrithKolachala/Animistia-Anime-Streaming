@@ -42,7 +42,7 @@ jobs:
         env:
           PORT: 4173
           BASE_PATH: /Animistia-Anime-Streaming/
-          VITE_API_BASE_URL: https://animistia-anime-streaming--Adityashiva1992.replit.app
+          VITE_API_BASE_URL: https://993b67cd-7a2c-4ebb-b674-f97ae35f8653-00-2oeoesq4u5slv.sisko.replit.dev/
 
       - name: Add SPA fallback
         run: cp artifacts/animistia/dist/public/index.html artifacts/animistia/dist/public/404.html
