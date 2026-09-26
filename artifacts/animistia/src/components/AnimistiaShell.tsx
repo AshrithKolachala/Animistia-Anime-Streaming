@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { Compass, Library, Menu, Play, Search, Shield, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
@@ -11,9 +11,17 @@ export function Logo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function Shell({ children, signedIn = false }: { children: React.ReactNode; signedIn?: boolean }) {
+const AuthStatusContext = createContext(false);
+
+export function AuthStatusProvider({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
+  return <AuthStatusContext.Provider value={signedIn}>{children}</AuthStatusContext.Provider>;
+}
+
+export function Shell({ children, signedIn }: { children: React.ReactNode; signedIn?: boolean }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const authStatus = useContext(AuthStatusContext);
+  const isSignedIn = signedIn ?? authStatus;
   const links = [
     { href: '/browse', label: 'Discover', icon: Compass },
     { href: '/library', label: 'My library', icon: Library },
@@ -36,8 +44,8 @@ export function Shell({ children, signedIn = false }: { children: React.ReactNod
             <Link href="/browse" className="hidden h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-white/5 hover:text-foreground sm:flex" aria-label="Search Animistia" data-testid="link-search">
               <Search size={17} />
             </Link>
-            <Link href={signedIn ? '/library' : '/sign-in'} className="hidden rounded-full border border-primary/45 px-4 py-2 text-[11px] font-bold uppercase tracking-[.14em] text-primary transition hover:bg-primary hover:text-primary-foreground sm:block" data-testid="link-auth">
-              {signedIn ? 'Your space' : 'Sign in'}
+             <Link href={isSignedIn ? '/library' : '/sign-in'} className="hidden rounded-full border border-primary/45 px-4 py-2 text-[11px] font-bold uppercase tracking-[.14em] text-primary transition hover:bg-primary hover:text-primary-foreground sm:block" data-testid="link-auth">
+               {isSignedIn ? 'Your space' : 'Sign in'}
             </Link>
             <button onClick={() => setOpen(!open)} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-foreground md:hidden" aria-label="Open navigation" data-testid="button-mobile-menu">
               {open ? <X size={18} /> : <Menu size={18} />}
@@ -47,7 +55,7 @@ export function Shell({ children, signedIn = false }: { children: React.ReactNod
         {open && (
           <div className="border-t border-white/[.07] bg-[#111116] px-5 py-4 md:hidden">
             {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="flex items-center gap-3 border-b border-white/5 py-3 text-sm text-muted-foreground" data-testid={`link-mobile-${link.label.toLowerCase().replace(' ', '-')}`}><link.icon size={16} />{link.label}</Link>)}
-            <Link href="/sign-in" className="mt-3 flex items-center gap-3 py-2 text-sm text-primary" data-testid="link-mobile-sign-in"><Play size={16} />Sign in to Animistia</Link>
+             <Link href={isSignedIn ? '/library' : '/sign-in'} onClick={() => setOpen(false)} className="mt-3 flex items-center gap-3 py-2 text-sm text-primary" data-testid="link-mobile-sign-in"><Play size={16} />{isSignedIn ? 'Your space' : 'Sign in to Animistia'}</Link>
           </div>
         )}
       </header>

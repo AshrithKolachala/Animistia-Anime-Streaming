@@ -12,6 +12,7 @@ import Library from '@/pages/Library';
 import Admin from '@/pages/Admin';
 import { AuthPage } from '@/pages/Auth';
 import NotFound from '@/pages/not-found';
+import { AuthStatusProvider } from '@/components/AnimistiaShell';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -116,8 +117,13 @@ function ClerkRouteContent() {
     }}
     routerPush={(to) => setLocation(stripBase(to))}
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-  ><Routes clerkReady /></ClerkProvider> : <Routes clerkReady={false} />;
+  ><AuthenticatedRoutes /></ClerkProvider> : <Routes clerkReady={false} />;
   return <>{content}</>;
+}
+
+function AuthenticatedRoutes() {
+  const { isSignedIn } = useAuth();
+  return <AuthStatusProvider signedIn={Boolean(isSignedIn)}><Routes clerkReady /></AuthStatusProvider>;
 }
 
 function stripBase(path: string): string {
