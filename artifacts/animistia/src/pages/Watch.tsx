@@ -59,7 +59,7 @@ export default function Watch() {
   const storagePath = (currentEpisode?.videoPath ?? show.videoPath)?.replace(/^\/objects\//, '') ?? '';
   const storedVideo = useGetStorageObject(storagePath, { query: { enabled: activeSourceType === 'uploaded' && Boolean(storagePath), queryKey: getGetStorageObjectQueryKey(storagePath) } });
   const captionStoragePath = (currentEpisode?.captionsPath ?? show.captionsPath)?.replace(/^\/objects\//, '') ?? '';
-  const storedCaptions = useGetStorageObject(captionStoragePath, { query: { enabled: Boolean(captionStoragePath), queryKey: getGetStorageObjectQueryKey(captionStoragePath) } });
+  const storedCaptions = useGetStorageObject(captionStoragePath, { request: { responseType: 'blob' }, query: { enabled: Boolean(captionStoragePath), retry: false, queryKey: getGetStorageObjectQueryKey(captionStoragePath) } });
 
   const [storedVideoUrl, setStoredVideoUrl] = useState('');
   const [captionText, setCaptionText] = useState('');
@@ -72,7 +72,12 @@ export default function Watch() {
       return undefined;
     }
     let cancelled = false;
-    storedCaptions.data.text().then((text) => { if (!cancelled) setCaptionText(text); });
+    const payload = storedCaptions.data as Blob | string;
+    if (typeof payload === 'string') {
+      setCaptionText(payload);
+      return undefined;
+    }
+    payload.text().then((text) => { if (!cancelled) setCaptionText(text); });
     return () => { cancelled = true; };
   }, [storedCaptions.data]);
 
@@ -129,7 +134,7 @@ export default function Watch() {
 
   return (
     <Shell>
-      <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-4 py-5 sm:px-8 sm:py-8 lg:px-12">
         <Link href="/browse" className="mb-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground transition hover:text-primary" data-testid="link-back-catalog">
           <ArrowLeft size={14} /> Back to catalog
         </Link>
@@ -163,14 +168,14 @@ export default function Watch() {
                 </div>
               )}
             </div>
-            <div className="mt-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div className="mt-6 flex flex-col justify-between gap-4 sm:mt-7 sm:flex-row sm:items-start">
               <div>
                 <div className="mb-2 font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">
                   {isSeries && currentEpisode ? `Season ${selectedSeason?.seasonNumber || 1} / Episode ${String(currentEpisode.episodeNumber).padStart(2, '0')}` : isSeries ? 'Series / Choose an episode' : 'Feature presentation'}
                 </div>
-                <h1 className="font-display text-4xl leading-tight sm:text-5xl">{currentEpisode?.title ?? show.title}</h1>
+                <h1 className="font-display text-3xl leading-tight sm:text-5xl">{currentEpisode?.title ?? show.title}</h1>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button onClick={save} className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-widest transition ${saved ? 'border-primary bg-primary text-primary-foreground' : 'border-white/15 text-muted-foreground hover:border-primary hover:text-primary'}`} data-testid="button-save-show">
                   {saved ? <Check size={14} /> : <Plus size={14} />}{saved ? 'Saved' : 'My list'}
                 </button>
