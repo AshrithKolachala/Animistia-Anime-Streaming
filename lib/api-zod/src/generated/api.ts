@@ -277,6 +277,41 @@ export const CreateEpisodeResponse = zod.object({
 
 
 /**
+ * @summary Update one episode
+ */
+export const UpdateEpisodeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateEpisodeBody = zod.object({
+  "episodeNumber": zod.number().min(1),
+  "title": zod.string().min(1),
+  "synopsis": zod.string(),
+  "sourceType": zod.enum(['uploaded', 'youtube']),
+  "videoUrl": zod.string().nullish(),
+  "videoPath": zod.string().nullish(),
+  "captionsPath": zod.string().nullish()
+})
+
+export const UpdateEpisodeResponse = zod.object({
+  "id": zod.number(),
+  "seasonId": zod.number(),
+  "episodeNumber": zod.number(),
+  "title": zod.string(),
+  "synopsis": zod.string(),
+  "sourceType": zod.enum(['uploaded', 'youtube']),
+  "videoUrl": zod.string().nullable(),
+  "videoPath": zod.string().nullable(),
+  "captionsPath": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Remove one episode
  */
 export const DeleteEpisodeParams = zod.object({

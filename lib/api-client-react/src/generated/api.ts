@@ -817,6 +817,78 @@ export const useCreateEpisode = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getCreateEpisodeMutationOptions(options));
     }
 
+export const getUpdateEpisodeUrl = (id: number,) => {
+
+
+
+
+  return `/api/episodes/${id}`
+}
+
+/**
+ * @summary Update one episode
+ */
+export const updateEpisode = async (id: number,
+    episodeInput: EpisodeInput, options?: Parameters<typeof customFetch>[1]): Promise<Episode> => {
+
+  return customFetch<Episode>(getUpdateEpisodeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(episodeInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateEpisodeMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEpisode>>, TError,{id: number;data: BodyType<EpisodeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEpisode>>, TError,{id: number;data: BodyType<EpisodeInput>}, TContext> => {
+
+const mutationKey = ['updateEpisode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEpisode>>, {id: number;data: BodyType<EpisodeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEpisode(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEpisodeMutationResult = NonNullable<Awaited<ReturnType<typeof updateEpisode>>>
+    export type UpdateEpisodeMutationBody = BodyType<EpisodeInput>
+    export type UpdateEpisodeMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Update one episode
+ */
+export const useUpdateEpisode = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEpisode>>, TError,{id: number;data: BodyType<EpisodeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEpisode>>,
+        TError,
+        {id: number;data: BodyType<EpisodeInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateEpisodeMutationOptions(options));
+    }
+
 export const getDeleteEpisodeUrl = (id: number,) => {
 
 

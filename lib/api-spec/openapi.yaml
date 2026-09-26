@@ -260,6 +260,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
   /episodes/{id}:
+    patch:
+      operationId: updateEpisode
+      tags: [admin]
+      summary: Update one episode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EpisodeInput"
+      responses:
+        "200":
+          description: Updated episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Episode"
+        "400":
+          description: Invalid episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Episode not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
     delete:
       operationId: deleteEpisode
       tags: [admin]

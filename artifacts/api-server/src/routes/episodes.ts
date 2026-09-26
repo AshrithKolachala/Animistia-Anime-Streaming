@@ -7,6 +7,9 @@ import {
   DeleteEpisodeParams,
   ListEpisodesParams,
   ListEpisodesResponse,
+  UpdateEpisodeBody,
+  UpdateEpisodeParams,
+  UpdateEpisodeResponse,
 } from "@workspace/api-zod";
 import { db, episodesTable, seasonsTable, showsTable } from "@workspace/db";
 import { requireAdminClerkAuth } from "../middlewares/auth";
@@ -69,6 +72,41 @@ router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, re
     const [{ value: episodeCount }] = await db.select({ value: count() }).from(episodesTable).where(eq(episodesTable.seasonId, params.data.seasonId));
     await db.update(showsTable).set({ episodesCount: Number(episodeCount) }).where(eq(showsTable.id, season.showId));
     res.status(201).json(CreateEpisodeResponse.parse(episode));
+  } catch {
+    res.status(409).json({ error: "That episode number already exists in this season" });
+  }
+});
+
+router.patch("/episodes/:id", requireAdminClerkAuth, async (req, res): Promise<void> => {
+  const params = UpdateEpisodeParams.safeParse(req.params);
+  const body = UpdateEpisodeBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid episode" });
+    return;
+  }
+  if (body.data.sourceType === "youtube" && !body.data.videoUrl) {
+    res.status(400).json({ error: "YouTube episodes require a video URL" });
+    return;
+  }
+  if (body.data.sourceType === "uploaded" && !body.data.videoPath) {
+    res.status(400).json({ error: "Uploaded episodes require a video path" });
+    return;
+  }
+  try {
+    const [episode] = await db.update(episodesTable).set({
+      episodeNumber: body.data.episodeNumber,
+      title: body.data.title,
+      synopsis: body.data.synopsis,
+      sourceType: body.data.sourceType,
+      videoUrl: body.data.videoUrl ?? null,
+      videoPath: body.data.videoPath ?? null,
+      captionsPath: body.data.captionsPath ?? null,
+    }).where(eq(episodesTable.id, params.data.id)).returning();
+    if (!episode) {
+      res.status(404).json({ error: "Episode not found" });
+      return;
+    }
+    res.json(UpdateEpisodeResponse.parse(episode));
   } catch {
     res.status(409).json({ error: "That episode number already exists in this season" });
   }

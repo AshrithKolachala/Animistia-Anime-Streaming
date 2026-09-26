@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Check, ChevronDown, Clock3, Maximize, Pause, Play, Plus, Share2, Star, Volume2 } from 'lucide-react';
 import { Link, useParams, useLocation } from 'wouter';
 import { getGetShowQueryKey, getGetStorageObjectQueryKey, getListEpisodesQueryKey, getListSeasonsQueryKey, useGetShow, useGetStorageObject, useListEpisodes, useListSeasons, useListShows } from '@workspace/api-client-react';
+import type { Show } from '@workspace/api-client-react';
 import { Shell, LoadingGrid } from '@/components/AnimistiaShell';
 import { ShowCard } from '@/components/ShowCard';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
@@ -15,16 +16,16 @@ export default function Watch() {
 
   // Find target anime using either the text name slug or fallback parameters
   const show = useMemo(() => {
-    const catalog = all.data?.length ? all.data : demoShows;
+    const catalog: Show[] = all.data?.length ? all.data : demoShows;
     if (params.name) {
       const cleanSlug = params.name.toLowerCase().trim();
-      return catalog.find((item) => item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug) ?? catalog;
+      return catalog.find((item) => item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug) ?? catalog[0];
     }
     if (params.id) {
       const numericId = Number(params.id);
-      return catalog.find((item) => item.id === numericId) ?? catalog;
+      return catalog.find((item) => item.id === numericId) ?? catalog[0];
     }
-    return catalog;
+    return catalog[0];
   }, [all.data, params.name, params.id]);
 
   const id = show.id;
@@ -45,9 +46,9 @@ export default function Watch() {
     if (!isSeries || !episodesQuery.data?.length) return null;
     if (params.episode) {
       const targetEpNum = Number(params.episode);
-      return episodesQuery.data.find((ep) => ep.episodeNumber === targetEpNum) ?? episodesQuery.data;
+      return episodesQuery.data.find((ep) => ep.episodeNumber === targetEpNum) ?? episodesQuery.data[0];
     }
-    return episodesQuery.data.find((episode) => episode.id === selectedEpisodeId) ?? episodesQuery.data;
+    return episodesQuery.data.find((episode) => episode.id === selectedEpisodeId) ?? episodesQuery.data[0];
   }, [isSeries, episodesQuery.data, selectedEpisodeId, params.episode]);
 
   const activeSourceType = currentEpisode?.sourceType ?? show.sourceType;
@@ -68,17 +69,11 @@ export default function Watch() {
   useEffect(() => {
     if (!storedCaptions.data) {
       setCaptionText('');
-      return;
+      return undefined;
     }
-    if (typeof (storedCaptions.data as any).text === 'function') {
-      let cancelled = false;
-      (storedCaptions.data as any).text().then((text: string) => { if (!cancelled) setCaptionText(text); });
-      return () => { cancelled = true; };
-    } else if (typeof storedCaptions.data === 'string') {
-      setCaptionText(storedCaptions.data);
-    } else if (storedCaptions.data && typeof (storedCaptions.data as any).text === 'string') {
-      setCaptionText((storedCaptions.data as any).text);
-    }
+    let cancelled = false;
+    storedCaptions.data.text().then((text) => { if (!cancelled) setCaptionText(text); });
+    return () => { cancelled = true; };
   }, [storedCaptions.data]);
 
   useEffect(() => {

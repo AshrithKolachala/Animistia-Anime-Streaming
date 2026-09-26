@@ -5,7 +5,7 @@ import { Link } from 'wouter';
 import {
   getGetDeveloperLockQueryKey, getGetHighlightsQueryKey, getListEpisodesQueryKey, getListSeasonsQueryKey, getListShowsQueryKey,
   useCreateEpisode, useCreateSeason, useCreateShow, useDeleteEpisode, useDeleteShow, useGetDeveloperLock, useHealthCheck,
-  useListEpisodes, useListSeasons, useListShows, useRequestUploadUrl, useUpdateDeveloperLock, useUpdateShow, useVerifyDeveloperLock,
+  useListEpisodes, useListSeasons, useListShows, useRequestUploadUrl, useUpdateDeveloperLock, useUpdateEpisode, useUpdateShow, useVerifyDeveloperLock,
 } from '@workspace/api-client-react';
 import type { Episode, MediaType, Show, ShowInput, ShowSourceType } from '@workspace/api-client-react';
 import { Shell } from '@/components/AnimistiaShell';
@@ -27,12 +27,14 @@ export default function Admin() {
   const requestUpload = useRequestUploadUrl();
   const createSeason = useCreateSeason();
   const createEpisode = useCreateEpisode();
+  const updateEpisode = useUpdateEpisode();
   const deleteEpisode = useDeleteEpisode();
   const updateLock = useUpdateDeveloperLock();
   const verifyLock = useVerifyDeveloperLock();
   const seasonsQuery = useListSeasons(selectedShow?.id ?? 0, { query: { enabled: Boolean(selectedShow?.mediaType === 'series'), queryKey: getListSeasonsQueryKey(selectedShow?.id ?? 0) } });
   const seasons = seasonsQuery.data ?? [];
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
+  const [editingEpisodeId, setEditingEpisodeId] = useState<number | null>(null);
   const episodesQuery = useListEpisodes(selectedSeasonId ?? 0, { query: { enabled: Boolean(selectedSeasonId), queryKey: getListEpisodesQueryKey(selectedSeasonId ?? 0) } });
   const episodes = episodesQuery.data ?? [];
   const [form, setForm] = useState<ShowInput>(emptyForm);
@@ -113,10 +115,20 @@ export default function Admin() {
   const saveEpisode = (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedSeasonId) return;
-    createEpisode.mutate({ seasonId: selectedSeasonId, data: { ...episode, episodeNumber: Number(episode.episodeNumber), title: episode.title, synopsis: episode.synopsis, videoUrl: episode.videoUrl, videoPath: episode.videoPath, captionsPath: episode.captionsPath } }, {
-      onSuccess: (created) => { setEpisode({ episodeNumber: created.episodeNumber + 1, title: '', synopsis: '', sourceType: 'uploaded', videoUrl: null, videoPath: null, captionsPath: null }); setNotice(`Episode ${created.episodeNumber} published.`); queryClient.invalidateQueries({ queryKey: getListEpisodesQueryKey(selectedSeasonId) }); queryClient.invalidateQueries({ queryKey: getListShowsQueryKey() }); queryClient.invalidateQueries({ queryKey: getGetHighlightsQueryKey() }); },
+    const data = { ...episode, episodeNumber: Number(episode.episodeNumber), title: episode.title, synopsis: episode.synopsis, videoUrl: episode.videoUrl, videoPath: episode.videoPath, captionsPath: episode.captionsPath };
+    const options = {
+      onSuccess: (saved: Episode) => {
+        setEditingEpisodeId(null);
+        setEpisode({ episodeNumber: saved.episodeNumber + 1, title: '', synopsis: '', sourceType: 'uploaded', videoUrl: null, videoPath: null, captionsPath: null });
+        setNotice(editingEpisodeId ? `Episode ${saved.episodeNumber} updated.` : `Episode ${saved.episodeNumber} published.`);
+        queryClient.invalidateQueries({ queryKey: getListEpisodesQueryKey(selectedSeasonId) });
+        queryClient.invalidateQueries({ queryKey: getListShowsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetHighlightsQueryKey() });
+      },
       onError: () => setNotice('That episode could not be saved. Check the video and episode number.'),
-    });
+    };
+    if (editingEpisodeId) updateEpisode.mutate({ id: editingEpisodeId, data }, options);
+    else createEpisode.mutate({ seasonId: selectedSeasonId, data }, options);
   };
 
   const uploadFile = (kind: 'movie' | 'episode' | 'portrait' | 'landscape' | 'movie-caption' | 'episode-caption') => async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,14 +184,14 @@ export default function Admin() {
             <button disabled={isBusy || Boolean(uploading)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50">{isBusy ? 'Saving...' : selectedShowId ? <><Save size={14} /> Save changes</> : <><Plus size={14} /> Create {form.mediaType}</>}</button>
           </form>
         </section>
-         {selectedShow?.mediaType === 'series' && <SeriesManager seasons={seasons} selectedSeasonId={selectedSeasonId} setSelectedSeasonId={setSelectedSeasonId} seasonNumber={seasonNumber} setSeasonNumber={setSeasonNumber} seasonTitle={seasonTitle} setSeasonTitle={setSeasonTitle} saveSeason={saveSeason} episodes={episodes} episode={episode} setEpisode={setEpisode} saveEpisode={saveEpisode} deleteEpisode={(id) => deleteEpisode.mutate({ id }, { onSuccess: () => { setNotice('Episode removed.'); if (selectedSeasonId) queryClient.invalidateQueries({ queryKey: getListEpisodesQueryKey(selectedSeasonId) }); queryClient.invalidateQueries({ queryKey: getListShowsQueryKey() }); } })} uploading={uploading === 'episode'} uploadingCaption={uploading === 'episode-caption'} uploadEpisode={uploadFile('episode')} uploadCaption={uploadFile('episode-caption')} busy={isBusy || deleteEpisode.isPending} />}
+         {selectedShow?.mediaType === 'series' && <SeriesManager seasons={seasons} selectedSeasonId={selectedSeasonId} setSelectedSeasonId={setSelectedSeasonId} editingEpisodeId={editingEpisodeId} setEditingEpisodeId={setEditingEpisodeId} seasonNumber={seasonNumber} setSeasonNumber={setSeasonNumber} seasonTitle={seasonTitle} setSeasonTitle={setSeasonTitle} saveSeason={saveSeason} episodes={episodes} episode={episode} setEpisode={setEpisode} saveEpisode={saveEpisode} editEpisode={(item) => { setEditingEpisodeId(item.id); setEpisode({ episodeNumber: item.episodeNumber, title: item.title, synopsis: item.synopsis, sourceType: item.sourceType, videoUrl: item.videoUrl, videoPath: item.videoPath, captionsPath: item.captionsPath }); }} deleteEpisode={(id) => deleteEpisode.mutate({ id }, { onSuccess: () => { setNotice('Episode removed.'); if (editingEpisodeId === id) setEditingEpisodeId(null); if (selectedSeasonId) queryClient.invalidateQueries({ queryKey: getListEpisodesQueryKey(selectedSeasonId) }); queryClient.invalidateQueries({ queryKey: getListShowsQueryKey() }); } })} uploading={uploading === 'episode'} uploadingCaption={uploading === 'episode-caption'} uploadEpisode={uploadFile('episode')} uploadCaption={uploadFile('episode-caption')} busy={isBusy || createEpisode.isPending || updateEpisode.isPending || deleteEpisode.isPending} />}
       </section>}
       <section className="space-y-8"><LockPanel lock={lock} password={lockPassword} setPassword={setLockPassword} onSave={configureLock} verifyPassword={verifyPassword} setVerifyPassword={setVerifyPassword} onVerify={verify} verified={verified} onToggle={toggleLock} pending={updateLock.isPending || verifyLock.isPending} /><div className="rounded-2xl border border-white/[.08] bg-secondary/40 p-5 sm:p-7"><div className="flex items-center justify-between"><div><div className="font-mono-app text-[10px] uppercase tracking-widest text-primary">Catalog / {shows.length}</div><h2 className="mt-2 font-display text-3xl">Published titles.</h2></div><Link href="/browse" className="text-xs font-bold uppercase tracking-widest text-primary">Preview</Link></div><div className="mt-6 space-y-2">{shows.slice(0, 10).map((show) => <div key={show.id} className={`group flex items-center justify-between gap-3 rounded-xl border p-2 transition ${selectedShowId === show.id ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:border-white/10 hover:bg-white/[.03]'}`}><button onClick={() => editShow(show)} className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-semibold">{show.title}</p><p className="mt-1 font-mono-app text-[9px] uppercase tracking-widest text-muted-foreground">{show.mediaType} / {show.episodesCount} {show.mediaType === 'series' ? 'eps' : 'film'} {show.featured && '/ featured'}</p></button><button onClick={() => removeShow(show.id, show.title)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`Delete ${show.title}`}><Trash2 size={13} /></button></div>)}</div></div></section>
     </div>
   </div></Shell>;
 }
 
- function SeriesManager({ seasons, selectedSeasonId, setSelectedSeasonId, seasonNumber, setSeasonNumber, seasonTitle, setSeasonTitle, saveSeason, episodes, episode, setEpisode, saveEpisode, deleteEpisode, uploading, uploadingCaption, uploadEpisode, uploadCaption, busy }: { seasons: import('@workspace/api-client-react').Season[]; selectedSeasonId: number | null; setSelectedSeasonId: (id: number) => void; seasonNumber: number; setSeasonNumber: (value: number) => void; seasonTitle: string; setSeasonTitle: (value: string) => void; saveSeason: (event: React.FormEvent) => void; episodes: Episode[]; episode: { episodeNumber: number; title: string; synopsis: string; sourceType: ShowSourceType; videoUrl: string | null; videoPath: string | null; captionsPath: string | null }; setEpisode: (episode: { episodeNumber: number; title: string; synopsis: string; sourceType: ShowSourceType; videoUrl: string | null; videoPath: string | null; captionsPath: string | null }) => void; saveEpisode: (event: React.FormEvent) => void; deleteEpisode: (id: number) => void; uploading: boolean; uploadingCaption: boolean; uploadEpisode: (event: React.ChangeEvent<HTMLInputElement>) => void; uploadCaption: (event: React.ChangeEvent<HTMLInputElement>) => void; busy: boolean }) {
+ function SeriesManager({ seasons, selectedSeasonId, setSelectedSeasonId, editingEpisodeId, setEditingEpisodeId, seasonNumber, setSeasonNumber, seasonTitle, setSeasonTitle, saveSeason, episodes, episode, setEpisode, saveEpisode, editEpisode, deleteEpisode, uploading, uploadingCaption, uploadEpisode, uploadCaption, busy }: { seasons: import('@workspace/api-client-react').Season[]; selectedSeasonId: number | null; setSelectedSeasonId: (id: number) => void; editingEpisodeId: number | null; setEditingEpisodeId: (id: number | null) => void; seasonNumber: number; setSeasonNumber: (value: number) => void; seasonTitle: string; setSeasonTitle: (value: string) => void; saveSeason: (event: React.FormEvent) => void; episodes: Episode[]; episode: { episodeNumber: number; title: string; synopsis: string; sourceType: ShowSourceType; videoUrl: string | null; videoPath: string | null; captionsPath: string | null }; setEpisode: (episode: { episodeNumber: number; title: string; synopsis: string; sourceType: ShowSourceType; videoUrl: string | null; videoPath: string | null; captionsPath: string | null }) => void; saveEpisode: (event: React.FormEvent) => void; editEpisode: (episode: Episode) => void; deleteEpisode: (id: number) => void; uploading: boolean; uploadingCaption: boolean; uploadEpisode: (event: React.ChangeEvent<HTMLInputElement>) => void; uploadCaption: (event: React.ChangeEvent<HTMLInputElement>) => void; busy: boolean }) {
   return (
     <section className="rounded-2xl border border-primary/20 bg-primary/[.03] p-5 sm:p-7">
       <div className="font-mono-app text-[10px] uppercase tracking-widest text-primary">Series workflow</div>
@@ -197,16 +209,16 @@ export default function Admin() {
           </div>
           {selectedSeasonId && (
             <div className="mt-7 border-t border-white/10 pt-6">
-              <div className="mb-4 flex items-center justify-between"><div><div className="font-mono-app text-[10px] uppercase tracking-widest text-primary">Episode upload</div><h3 className="mt-1 font-display text-2xl">Add the next chapter.</h3></div><span className="font-mono-app text-[10px] uppercase tracking-widest text-muted-foreground">{episodes.length} published</span></div>
+              <div className="mb-4 flex items-center justify-between"><div><div className="font-mono-app text-[10px] uppercase tracking-widest text-primary">{editingEpisodeId ? 'Episode edit' : 'Episode upload'}</div><h3 className="mt-1 font-display text-2xl">{editingEpisodeId ? 'Refine this chapter.' : 'Add the next chapter.'}</h3></div><div className="flex items-center gap-3"><span className="font-mono-app text-[10px] uppercase tracking-widest text-muted-foreground">{episodes.length} published</span>{editingEpisodeId && <button type="button" onClick={() => { setEditingEpisodeId(null); setEpisode({ episodeNumber: episodes.length + 1, title: '', synopsis: '', sourceType: 'uploaded', videoUrl: null, videoPath: null, captionsPath: null }); }} className="text-xs text-muted-foreground hover:text-primary">Cancel</button>}</div></div>
               <form onSubmit={saveEpisode} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-[100px_1fr]"><Field label="Episode"><input type="number" min="1" required value={episode.episodeNumber} onChange={(e) => setEpisode({ ...episode, episodeNumber: Number(e.target.value) })} className="admin-input" /></Field><Field label="Title"><input required value={episode.title} onChange={(e) => setEpisode({ ...episode, title: e.target.value })} placeholder="Episode title" className="admin-input" /></Field></div>
                 <Field label="Synopsis"><textarea rows={2} value={episode.synopsis} onChange={(e) => setEpisode({ ...episode, synopsis: e.target.value })} placeholder="Optional episode synopsis" className="admin-input resize-none" /></Field>
                 <Field label="Episode source"><select value={episode.sourceType} onChange={(e) => setEpisode({ ...episode, sourceType: e.target.value as ShowSourceType, videoUrl: null, videoPath: null })} className="admin-input"><option value="uploaded">Upload video</option><option value="youtube">YouTube URL</option></select></Field>
                  {episode.sourceType === 'youtube' ? <Field label="YouTube URL"><input required value={episode.videoUrl ?? ''} onChange={(e) => setEpisode({ ...episode, videoUrl: e.target.value, videoPath: null })} placeholder="https://youtube.com/watch?v=..." className="admin-input" /></Field> : <VideoPicker value={Boolean(episode.videoPath)} uploading={uploading} onChange={uploadEpisode} />}
                  <CaptionPicker value={episode.captionsPath} uploading={uploadingCaption} onChange={uploadCaption} />
-                <button disabled={busy || uploading || (!episode.videoPath && episode.sourceType === 'uploaded') || (!episode.videoUrl && episode.sourceType === 'youtube')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"><Upload size={14} /> Publish episode {episode.episodeNumber}</button>
+                 <button disabled={busy || uploading || (!episode.videoPath && episode.sourceType === 'uploaded') || (!episode.videoUrl && episode.sourceType === 'youtube')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"><Upload size={14} /> {editingEpisodeId ? 'Save episode changes' : `Publish episode ${episode.episodeNumber}`}</button>
               </form>
-              <div className="mt-6 space-y-2">{episodes.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-secondary/50 px-3 py-3"><div><span className="font-mono-app text-[10px] text-primary">EP {String(item.episodeNumber).padStart(2, '0')}</span><span className="ml-3 text-sm font-semibold">{item.title}</span></div><button type="button" onClick={() => deleteEpisode(item.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Delete ${item.title}`}><Trash2 size={14} /></button></div>)}</div>
+               <div className="mt-6 space-y-2">{episodes.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-secondary/50 px-3 py-3"><div><span className="font-mono-app text-[10px] text-primary">EP {String(item.episodeNumber).padStart(2, '0')}</span><span className="ml-3 text-sm font-semibold">{item.title}</span></div><div className="flex items-center gap-3"><button type="button" onClick={() => editEpisode(item)} className="text-muted-foreground hover:text-primary" aria-label={`Edit ${item.title}`}><Pencil size={14} /></button><button type="button" onClick={() => deleteEpisode(item.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Delete ${item.title}`}><Trash2 size={14} /></button></div></div>)}</div>
             </div>
           )}
         </>
