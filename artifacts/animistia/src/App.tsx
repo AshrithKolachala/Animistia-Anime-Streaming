@@ -1,6 +1,5 @@
 import { type ReactNode } from 'react';
 import { ClerkProvider, useAuth, useUser } from '@clerk/react';
-import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
@@ -16,7 +15,7 @@ import { AuthStatusProvider } from '@/components/AnimistiaShell';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
@@ -62,7 +61,7 @@ function AdminGate() {
 
   const email = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase();
   if (email !== 'adityashiva19912021@gmail.com') {
-    return <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5"><div className="max-w-md rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-8 text-center shadow-[0_0_50px_rgba(44,226,255,.08)] backdrop-blur-xl"><div className="font-mono-app text-[10px] uppercase tracking-[.22em] text-cyan-200">Restricted screening room</div><h1 className="mt-3 font-display text-4xl">Admin access only.</h1><p className="mt-4 text-sm leading-6 text-muted-foreground">This account is signed in, but it is not authorized to manage the Animistia catalog.</p><a href={basePath || '/'} className="mt-7 inline-flex rounded-full border border-cyan-200/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-cyan-100 transition hover:bg-cyan-200/10">Return home</a></div></div>;
+    return <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5"><div className="max-w-md rounded-2xl border border-cyan-200/20 bg-[#10152a]/80 p-8 text-center text-sm text-slate-200">Access denied. This area is restricted to the site owner.</div></div>;
   }
   return <Admin />;
 }
