@@ -1,4 +1,3 @@
-import { asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   CreateSeasonBody,
@@ -7,8 +6,13 @@ import {
   ListSeasonsParams,
   ListSeasonsResponse,
 } from "@workspace/api-zod";
-import { db, seasonsTable, showsTable } from "@workspace/db";
 import { requireAdminClerkAuth } from "../middlewares/auth";
+import {
+  createSeason,
+  FirestoreConflictError,
+  getShow,
+  listSeasons,
+} from "../lib/firestoreData";
 
 const router: IRouter = Router();
 
@@ -18,9 +22,7 @@ router.get("/shows/:showId/seasons", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const rows = await db.select().from(seasonsTable)
-    .where(eq(seasonsTable.showId, parsed.data.showId))
-    .orderBy(asc(seasonsTable.seasonNumber));
+  const rows = await listSeasons(parsed.data.showId);
   res.json(ListSeasonsResponse.parse(rows));
 });
 
@@ -31,9 +33,7 @@ router.post("/shows/:showId/seasons", requireAdminClerkAuth, async (req, res): P
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid season" });
     return;
   }
-  const [show] = await db.select({ id: showsTable.id, mediaType: showsTable.mediaType })
-    .from(showsTable)
-    .where(eq(showsTable.id, params.data.showId));
+  const show = await getShow(params.data.showId);
   if (!show) {
     res.status(404).json({ error: "Series not found" });
     return;
@@ -43,13 +43,14 @@ router.post("/shows/:showId/seasons", requireAdminClerkAuth, async (req, res): P
     return;
   }
   try {
-    const [season] = await db.insert(seasonsTable).values({
+    const season = await createSeason({
       showId: params.data.showId,
       seasonNumber: body.data.seasonNumber,
       title: body.data.title ?? "",
-    }).returning();
+    });
     res.status(201).json(CreateSeasonResponse.parse(season));
-  } catch {
+  } catch (error) {
+    if (!(error instanceof FirestoreConflictError)) throw error;
     res.status(409).json({ error: "That season already exists" });
   }
 });

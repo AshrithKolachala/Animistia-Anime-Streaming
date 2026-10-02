@@ -1,4 +1,3 @@
-import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   CreateShowBody,
@@ -13,8 +12,14 @@ import {
   UpdateShowParams,
   UpdateShowResponse,
 } from "@workspace/api-zod";
-import { db, showsTable } from "@workspace/db";
 import { requireAdminClerkAuth } from "../middlewares/auth";
+import {
+  createShow,
+  deleteShow,
+  getShow,
+  listShows,
+  updateShow,
+} from "../lib/firestoreData";
 
 const router: IRouter = Router();
 
@@ -30,11 +35,11 @@ router.get("/shows", async (req, res): Promise<void> => {
     return;
   }
   const { query, genre, sourceType } = parsed.data;
-  const rows = await db.select().from(showsTable).orderBy(desc(showsTable.createdAt));
+  const rows = await listShows();
   const needle = query?.toLowerCase().trim();
   const filtered = rows.filter((show) => {
     const matchesQuery = !needle || show.title.toLowerCase().includes(needle) || show.synopsis.toLowerCase().includes(needle);
-    const matchesGenre = !genre || show.genres.some((item) => item.toLowerCase() === genre.toLowerCase());
+    const matchesGenre = !genre || show.genres.some((item: string) => item.toLowerCase() === genre.toLowerCase());
     const matchesSource = !sourceType || show.sourceType === sourceType;
     return matchesQuery && matchesGenre && matchesSource;
   });
@@ -47,7 +52,7 @@ router.get("/shows/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [show] = await db.select().from(showsTable).where(eq(showsTable.id, params.data.id));
+  const show = await getShow(params.data.id);
   if (!show) {
     res.status(404).json({ error: "Show not found" });
     return;
@@ -56,7 +61,7 @@ router.get("/shows/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/highlights", async (_req, res): Promise<void> => {
-  const rows = await db.select().from(showsTable).orderBy(desc(showsTable.createdAt));
+  const rows = await listShows();
   res.json(GetHighlightsResponse.parse({
     featured: rows.filter((show) => show.featured).slice(0, 5),
     trending: rows.slice(0, 6),
@@ -79,13 +84,18 @@ router.post("/shows", requireAdminClerkAuth, async (req, res): Promise<void> => 
     res.status(400).json({ error: "Uploaded shows require a video path" });
     return;
   }
-  const [show] = await db.insert(showsTable).values({
+  const show = await createShow({
     ...data,
     slug: slugify(data.title),
+    rating: data.rating ?? 0,
     episodesCount: data.mediaType === "series" ? 0 : 1,
-    videoUrl: data.mediaType === "series" ? null : data.videoUrl,
-    videoPath: data.mediaType === "series" ? null : data.videoPath,
-  }).returning();
+    videoUrl: data.mediaType === "series" ? null : data.videoUrl ?? null,
+    videoPath: data.mediaType === "series" ? null : data.videoPath ?? null,
+    captionsPath: data.captionsPath ?? null,
+    thumbnailUrl: data.thumbnailUrl ?? null,
+    bannerUrl: data.bannerUrl ?? null,
+    featured: data.featured ?? false,
+  });
   res.status(201).json(CreateShowResponse.parse(show));
 });
 
@@ -112,7 +122,7 @@ router.patch("/shows/:id", requireAdminClerkAuth, async (req, res): Promise<void
     parsed.data.videoUrl = null;
     parsed.data.videoPath = null;
   }
-  const [show] = await db.update(showsTable).set(parsed.data).where(eq(showsTable.id, params.data.id)).returning();
+  const show = await updateShow(params.data.id, parsed.data);
   if (!show) {
     res.status(404).json({ error: "Show not found" });
     return;
@@ -126,7 +136,7 @@ router.delete("/shows/:id", requireAdminClerkAuth, async (req, res): Promise<voi
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [show] = await db.delete(showsTable).where(eq(showsTable.id, params.data.id)).returning();
+  const show = await deleteShow(params.data.id);
   if (!show) {
     res.status(404).json({ error: "Show not found" });
     return;

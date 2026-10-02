@@ -1,4 +1,3 @@
-import { asc, eq, count } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   CreateEpisodeBody,
@@ -11,8 +10,16 @@ import {
   UpdateEpisodeParams,
   UpdateEpisodeResponse,
 } from "@workspace/api-zod";
-import { db, episodesTable, seasonsTable, showsTable } from "@workspace/db";
 import { requireAdminClerkAuth } from "../middlewares/auth";
+import {
+  createEpisode,
+  deleteEpisode,
+  FirestoreConflictError,
+  getSeason,
+  getShow,
+  listEpisodes,
+  updateEpisode,
+} from "../lib/firestoreData";
 
 const router: IRouter = Router();
 
@@ -22,9 +29,7 @@ router.get("/seasons/:seasonId/episodes", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const rows = await db.select().from(episodesTable)
-    .where(eq(episodesTable.seasonId, parsed.data.seasonId))
-    .orderBy(asc(episodesTable.episodeNumber));
+  const rows = await listEpisodes(parsed.data.seasonId);
   res.json(ListEpisodesResponse.parse(rows));
 });
 
@@ -35,18 +40,13 @@ router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, re
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid episode" });
     return;
   }
-  const [season] = await db.select({
-    id: seasonsTable.id,
-    showId: seasonsTable.showId,
-    mediaType: showsTable.mediaType,
-  }).from(seasonsTable)
-    .innerJoin(showsTable, eq(showsTable.id, seasonsTable.showId))
-    .where(eq(seasonsTable.id, params.data.seasonId));
+  const season = await getSeason(params.data.seasonId);
   if (!season) {
     res.status(404).json({ error: "Season not found" });
     return;
   }
-  if (season.mediaType !== "series") {
+  const show = await getShow(season.showId);
+  if (!show || show.mediaType !== "series") {
     res.status(400).json({ error: "Episodes can only be added to series" });
     return;
   }
@@ -59,7 +59,7 @@ router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, re
     return;
   }
   try {
-    const [episode] = await db.insert(episodesTable).values({
+    const episode = await createEpisode({
       seasonId: params.data.seasonId,
       episodeNumber: body.data.episodeNumber,
       title: body.data.title,
@@ -68,11 +68,10 @@ router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, re
       videoUrl: body.data.videoUrl ?? null,
       videoPath: body.data.videoPath ?? null,
       captionsPath: body.data.captionsPath ?? null,
-    }).returning();
-    const [{ value: episodeCount }] = await db.select({ value: count() }).from(episodesTable).where(eq(episodesTable.seasonId, params.data.seasonId));
-    await db.update(showsTable).set({ episodesCount: Number(episodeCount) }).where(eq(showsTable.id, season.showId));
+    });
     res.status(201).json(CreateEpisodeResponse.parse(episode));
-  } catch {
+  } catch (error) {
+    if (!(error instanceof FirestoreConflictError)) throw error;
     res.status(409).json({ error: "That episode number already exists in this season" });
   }
 });
@@ -93,7 +92,7 @@ router.patch("/episodes/:id", requireAdminClerkAuth, async (req, res): Promise<v
     return;
   }
   try {
-    const [episode] = await db.update(episodesTable).set({
+    const episode = await updateEpisode(params.data.id, {
       episodeNumber: body.data.episodeNumber,
       title: body.data.title,
       synopsis: body.data.synopsis,
@@ -101,13 +100,14 @@ router.patch("/episodes/:id", requireAdminClerkAuth, async (req, res): Promise<v
       videoUrl: body.data.videoUrl ?? null,
       videoPath: body.data.videoPath ?? null,
       captionsPath: body.data.captionsPath ?? null,
-    }).where(eq(episodesTable.id, params.data.id)).returning();
+    });
     if (!episode) {
       res.status(404).json({ error: "Episode not found" });
       return;
     }
     res.json(UpdateEpisodeResponse.parse(episode));
-  } catch {
+  } catch (error) {
+    if (!(error instanceof FirestoreConflictError)) throw error;
     res.status(409).json({ error: "That episode number already exists in this season" });
   }
 });
@@ -118,15 +118,10 @@ router.delete("/episodes/:id", requireAdminClerkAuth, async (req, res): Promise<
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [episode] = await db.delete(episodesTable).where(eq(episodesTable.id, params.data.id)).returning();
+  const episode = await deleteEpisode(params.data.id);
   if (!episode) {
     res.status(404).json({ error: "Episode not found" });
     return;
-  }
-  const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, episode.seasonId));
-  if (season) {
-    const [{ value: episodeCount }] = await db.select({ value: count() }).from(episodesTable).where(eq(episodesTable.seasonId, season.id));
-    await db.update(showsTable).set({ episodesCount: Number(episodeCount) }).where(eq(showsTable.id, season.showId));
   }
   res.sendStatus(204);
 });

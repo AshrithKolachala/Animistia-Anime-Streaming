@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   GetDeveloperLockResponse,
@@ -7,17 +6,17 @@ import {
   VerifyDeveloperLockBody,
   VerifyDeveloperLockResponse,
 } from "@workspace/api-zod";
-import { db, developerSettingsTable } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { requireAdminClerkAuth } from "../middlewares/auth";
+import {
+  getDeveloperSettings,
+  updateDeveloperSettings,
+} from "../lib/firestoreData";
 
 const router: IRouter = Router();
 
 async function getSettings() {
-  const [existing] = await db.select().from(developerSettingsTable).where(eq(developerSettingsTable.id, 1));
-  if (existing) return existing;
-  const [created] = await db.insert(developerSettingsTable).values({ id: 1 }).returning();
-  return created;
+  return getDeveloperSettings();
 }
 
 router.get("/admin/lock", requireAdminClerkAuth, async (_req, res): Promise<void> => {
@@ -35,11 +34,10 @@ router.put("/admin/lock", requireAdminClerkAuth, async (req, res): Promise<void>
     return;
   }
   const current = await getSettings();
-  const [updated] = await db.update(developerSettingsTable).set({
+  const updated = await updateDeveloperSettings({
     lockEnabled: parsed.data.enabled,
     passwordHash: parsed.data.password ? hashPassword(parsed.data.password) : current.passwordHash,
-    updatedAt: new Date(),
-  }).where(eq(developerSettingsTable.id, 1)).returning();
+  });
   res.json(UpdateDeveloperLockResponse.parse({
     enabled: updated.lockEnabled,
     configured: Boolean(updated.passwordHash),
