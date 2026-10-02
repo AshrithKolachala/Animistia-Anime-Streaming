@@ -1,4 +1,5 @@
 import { Readable } from 'stream';
+import { getAuth } from '@clerk/express';
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
@@ -10,6 +11,7 @@ import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+import { isFreeEpisodeAsset } from '../lib/firestoreData';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -104,6 +106,16 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
     const objectPath = `/objects/${wildcardPath}`;
+    const freeEpisodeAsset = await isFreeEpisodeAsset(objectPath);
+    const isEpisodeAsset = freeEpisodeAsset !== null;
+    if (isEpisodeAsset) {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.vary('Cookie');
+    }
+    if (!getAuth(req).userId && isEpisodeAsset && !freeEpisodeAsset) {
+      res.status(401).json({ error: 'Sign in to watch this episode' });
+      return;
+    }
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);
 
@@ -126,6 +138,7 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+      if (isEpisodeAsset) res.setHeader('Cache-Control', 'private, no-store');
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(

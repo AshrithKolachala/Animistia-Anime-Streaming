@@ -4,7 +4,15 @@ import { Link } from 'wouter';
 
 export function AuthPage({ mode, clerkReady }: { mode: 'sign-in' | 'sign-up'; clerkReady: boolean }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-  return <div className="grain flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#111116] px-4 py-10"><div className="pointer-events-none absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-accent/10 blur-3xl" /><div className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl" /><div className="relative w-full max-w-[440px]"><Link href="/" className="mb-7 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground transition hover:text-primary" data-testid="link-auth-back"><ArrowLeft size={14} /> Return to Animistia</Link>{clerkReady ? <div className="animistia-clerk">{mode === 'sign-in' ? <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /> : <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />}</div> : <FallbackAuth mode={mode} />}</div></div>;
+  const requestedRedirect = new URLSearchParams(window.location.search).get('redirect_url');
+  const isSafeAppPath = Boolean(
+    requestedRedirect?.startsWith('/') &&
+    !requestedRedirect.startsWith('//') &&
+    (!basePath || requestedRedirect === basePath || requestedRedirect.startsWith(`${basePath}/`)),
+  );
+  const redirectUrl = isSafeAppPath ? requestedRedirect ?? undefined : undefined;
+  const redirectQuery = redirectUrl ? `?redirect_url=${encodeURIComponent(redirectUrl)}` : '';
+  return <div className="grain flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#111116] px-4 py-10"><div className="pointer-events-none absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-accent/10 blur-3xl" /><div className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl" /><div className="relative w-full max-w-[440px]"><Link href="/" className="mb-7 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground transition hover:text-primary" data-testid="link-auth-back"><ArrowLeft size={14} /> Return to Animistia</Link>{clerkReady ? <div className="animistia-clerk">{mode === 'sign-in' ? <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up${redirectQuery}`} forceRedirectUrl={redirectUrl} /> : <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in${redirectQuery}`} forceRedirectUrl={redirectUrl} />}</div> : <FallbackAuth mode={mode} />}</div></div>;
 }
 
 function FallbackAuth({ mode }: { mode: 'sign-in' | 'sign-up' }) {

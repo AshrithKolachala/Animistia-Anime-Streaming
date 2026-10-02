@@ -1,2 +1,3 @@
 - [YouTube caption sourcing](youtube-captions.md) — custom captions come from uploaded WebVTT tracks, not caption extraction from the YouTube iframe.
 - [Animistia Firebase data](firebase-data-environments.md) — development catalog data seeds one Firestore database shared by development and production.
+- [Animistia episode access](episode-access-policy.md) — guests can watch Season 1 Episode 1; signing in unlocks every episode at no charge.

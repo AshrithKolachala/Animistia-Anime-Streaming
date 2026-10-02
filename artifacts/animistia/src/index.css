@@ -83,8 +83,15 @@
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes drift { from { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -10px, 0); } to { transform: translate3d(0, 0, 0); } }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes selection-enter { from { opacity: 0; transform: translate3d(0, 18px, 0); filter: blur(8px); } to { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); } }
+@keyframes selection-backdrop { from { opacity: 0; transform: scale(1.035); } to { opacity: .35; transform: scale(1); } }
 .animate-rise { animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
 .animate-drift { animation: drift 7s ease-in-out infinite; }
+.animate-selection-enter { animation: selection-enter .75s cubic-bezier(.22,1,.36,1) both; }
+.animate-selection-backdrop { animation: selection-backdrop 1.1s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-selection-enter, .animate-selection-backdrop { animation: none; }
+}
 .delay-1 { animation-delay: .08s; } .delay-2 { animation-delay: .16s; } .delay-3 { animation-delay: .24s; }
 .skeleton { background: linear-gradient(100deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%); background-size: 400% 100%; animation: shimmer 1.5s infinite; }
 .grain::after { content: ''; pointer-events: none; position: fixed; inset: 0; opacity: .035; z-index: 50; background-image: radial-gradient(rgba(255,255,255,.7) .55px, transparent .55px); background-size: 5px 5px; }

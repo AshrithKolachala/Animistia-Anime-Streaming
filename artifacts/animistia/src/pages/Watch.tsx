@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Clock3, Maximize, Pause, Play, Plus, Share2, Star, Volume2 } from 'lucide-react';
+import { useAuth } from '@clerk/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Check, ChevronDown, Clock3, LockKeyhole, Maximize, Pause, Play, Plus, Share2, Star, Volume2 } from 'lucide-react';
 import { Link, useParams, useLocation } from 'wouter';
 import { getGetShowQueryKey, getGetStorageObjectQueryKey, getListEpisodesQueryKey, getListSeasonsQueryKey, useGetShow, useGetStorageObject, useListEpisodes, useListSeasons, useListShows } from '@workspace/api-client-react';
 import type { Show } from '@workspace/api-client-react';
@@ -12,6 +14,9 @@ export default function Watch() {
   // Parse routes dynamically for custom anime platforms
   const params = useParams<{ id?: string; name?: string; season?: string; episode?: string }>();
   const [location, setLocation] = useLocation();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const viewerSignedIn = Boolean(isSignedIn);
+  const queryClient = useQueryClient();
   const all = useListShows();
 
   // Find target anime using either the text name slug or fallback parameters
@@ -41,6 +46,13 @@ export default function Watch() {
   const selectedSeason = seasonsQuery.data?.find((season) => season.id === selectedSeasonId) ?? seasonsQuery.data?.[0];
   const episodesQuery = useListEpisodes(selectedSeason?.id ?? 0, { query: { enabled: Boolean(selectedSeason?.id), queryKey: getListEpisodesQueryKey(selectedSeason?.id ?? 0) } });
 
+  useEffect(() => {
+    if (!authLoaded || !selectedSeason?.id) return;
+    void queryClient.invalidateQueries({
+      queryKey: getListEpisodesQueryKey(selectedSeason.id),
+    });
+  }, [authLoaded, viewerSignedIn, selectedSeason?.id, queryClient]);
+
   // Track currently active episode streaming logic
   const currentEpisode = useMemo(() => {
     if (!isSeries || !episodesQuery.data?.length) return null;
@@ -51,23 +63,42 @@ export default function Watch() {
     return episodesQuery.data.find((episode) => episode.id === selectedEpisodeId) ?? episodesQuery.data[0];
   }, [isSeries, episodesQuery.data, selectedEpisodeId, params.episode]);
 
+  const isFreeEpisode =
+    isSeries &&
+    selectedSeason?.seasonNumber === 1 &&
+    currentEpisode?.episodeNumber === 1;
+  const requiresEpisodeSignIn =
+    isSeries && Boolean(currentEpisode) && !viewerSignedIn && !isFreeEpisode;
+  const canAccessCurrentEpisode = !requiresEpisodeSignIn;
+  const redirectToEpisode = `${window.location.pathname}${window.location.search}`;
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(redirectToEpisode)}`;
+  const signUpHref = `/sign-up?redirect_url=${encodeURIComponent(redirectToEpisode)}`;
+
   const activeSourceType = currentEpisode?.sourceType ?? show.sourceType;
   const activeVideoUrl = currentEpisode?.videoUrl ?? show.videoUrl;
   const youtubeVideoId = getVideoId(activeVideoUrl);
   const hasYouTube = activeSourceType === 'youtube' && Boolean(youtubeVideoId);
 
   const storagePath = (currentEpisode?.videoPath ?? show.videoPath)?.replace(/^\/objects\//, '') ?? '';
-  const storedVideo = useGetStorageObject(storagePath, { query: { enabled: activeSourceType === 'uploaded' && Boolean(storagePath), queryKey: getGetStorageObjectQueryKey(storagePath) } });
+  const storedVideo = useGetStorageObject(storagePath, { query: { enabled: canAccessCurrentEpisode && activeSourceType === 'uploaded' && Boolean(storagePath), queryKey: getGetStorageObjectQueryKey(storagePath) } });
   const captionStoragePath = (currentEpisode?.captionsPath ?? show.captionsPath)?.replace(/^\/objects\//, '') ?? '';
-  const storedCaptions = useGetStorageObject(captionStoragePath, { request: { responseType: 'blob' }, query: { enabled: Boolean(captionStoragePath), retry: false, queryKey: getGetStorageObjectQueryKey(captionStoragePath) } });
+  const storedCaptions = useGetStorageObject(captionStoragePath, { request: { responseType: 'blob' }, query: { enabled: canAccessCurrentEpisode && Boolean(captionStoragePath), retry: false, queryKey: getGetStorageObjectQueryKey(captionStoragePath) } });
 
   const [storedVideoUrl, setStoredVideoUrl] = useState('');
   const [captionText, setCaptionText] = useState('');
 
-  useEffect(() => { if (!storedVideo.data) return; const url = URL.createObjectURL(storedVideo.data); setStoredVideoUrl(url); return () => URL.revokeObjectURL(url); }, [storedVideo.data]);
+  useEffect(() => {
+    if (!canAccessCurrentEpisode || !storedVideo.data) {
+      setStoredVideoUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(storedVideo.data);
+    setStoredVideoUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [canAccessCurrentEpisode, storedVideo.data]);
 
   useEffect(() => {
-    if (!storedCaptions.data) {
+    if (!canAccessCurrentEpisode || !storedCaptions.data) {
       setCaptionText('');
       return undefined;
     }
@@ -79,7 +110,7 @@ export default function Watch() {
     }
     payload.text().then((text) => { if (!cancelled) setCaptionText(text); });
     return () => { cancelled = true; };
-  }, [storedCaptions.data]);
+  }, [canAccessCurrentEpisode, storedCaptions.data]);
 
   useEffect(() => {
     if (params.season && seasonsQuery.data?.length) {
@@ -141,7 +172,13 @@ export default function Watch() {
         <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
           <div>
             <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0f] shadow-2xl">
-              {hasYouTube ? (
+              {requiresEpisodeSignIn ? (
+                <EpisodeAccessGate
+                  episodeNumber={currentEpisode?.episodeNumber ?? 1}
+                  signInHref={signInHref}
+                  signUpHref={signUpHref}
+                />
+              ) : hasYouTube ? (
       <YouTubePlayer 
         key={`${currentEpisode?.id ?? show.id}-${youtubeVideoId}`} 
         videoId={youtubeVideoId} 
@@ -168,6 +205,15 @@ export default function Watch() {
                 </div>
               )}
             </div>
+            {isFreeEpisode && !viewerSignedIn && (
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/[.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" data-testid="free-episode-sign-in-prompt">
+                <p className="text-sm text-foreground"><span className="font-semibold text-primary">Episode 1 is free.</span> Sign in to watch every episode for free.</p>
+                <div className="flex shrink-0 gap-4 text-xs font-bold uppercase tracking-wider">
+                  <Link href={signInHref} className="text-primary hover:text-foreground">Sign in</Link>
+                  <Link href={signUpHref} className="text-muted-foreground hover:text-primary">Create account</Link>
+                </div>
+              </div>
+            )}
             <div className="mt-6 flex flex-col justify-between gap-4 sm:mt-7 sm:flex-row sm:items-start">
               <div>
                 <div className="mb-2 font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">
@@ -214,6 +260,7 @@ export default function Watch() {
                 selectedEpisodeId={currentEpisode?.id ?? null} 
                 onSeasonChange={(seasonId) => { setSelectedSeasonId(seasonId); setSelectedEpisodeId(null); }} 
                 onEpisodeChange={handleEpisodePickerClick} 
+                signedIn={viewerSignedIn}
                 loading={seasonsQuery.isLoading || episodesQuery.isLoading} 
               />
             )}
@@ -239,7 +286,30 @@ export default function Watch() {
   );
 }
 
-function SeriesEpisodes({ seasons, selectedSeason, episodes, selectedEpisodeId, onSeasonChange, onEpisodeChange, loading }: { seasons: import('@workspace/api-client-react').Season[]; selectedSeason?: import('@workspace/api-client-react').Season; episodes: import('@workspace/api-client-react').Episode[]; selectedEpisodeId: number | null; onSeasonChange: (id: number) => void; onEpisodeChange: (id: number) => void; loading: boolean }) {
+function EpisodeAccessGate({ episodeNumber, signInHref, signUpHref }: { episodeNumber: number; signInHref: string; signUpHref: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 py-8 text-center" data-testid="episode-sign-in-gate">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+        <LockKeyhole size={22} />
+      </div>
+      <div className="mt-5 font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Free with an account</div>
+      <h2 className="mt-2 font-display text-3xl">Episode {String(episodeNumber).padStart(2, '0')}</h2>
+      <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+        Episode 1 is free to watch. Sign in or create a free account to unlock every episode.
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link href={signInHref} className="rounded-full bg-primary px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-primary-foreground transition hover:brightness-110">
+          Sign in to watch all
+        </Link>
+        <Link href={signUpHref} className="rounded-full border border-white/15 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-foreground transition hover:border-primary/50">
+          Create free account
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function SeriesEpisodes({ seasons, selectedSeason, episodes, selectedEpisodeId, onSeasonChange, onEpisodeChange, signedIn, loading }: { seasons: import('@workspace/api-client-react').Season[]; selectedSeason?: import('@workspace/api-client-react').Season; episodes: import('@workspace/api-client-react').Episode[]; selectedEpisodeId: number | null; onSeasonChange: (id: number) => void; onEpisodeChange: (id: number) => void; signedIn: boolean; loading: boolean }) {
   return (
     <section className="mt-10 rounded-2xl border border-white/10 bg-secondary/50 p-5 sm:p-6" data-testid="series-episode-picker">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -258,10 +328,16 @@ function SeriesEpisodes({ seasons, selectedSeason, episodes, selectedEpisodeId, 
       ) : episodes.length ? (
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
           {episodes.map((episode) => (
-            <button key={episode.id} type="button" onClick={() => onEpisodeChange(episode.id)} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${selectedEpisodeId === episode.id ? 'border-primary/60 bg-primary/10' : 'border-white/10 hover:border-primary/40'}`}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[.06] font-mono-app text-[10px] text-primary">{String(episode.episodeNumber).padStart(2, '0')}</span>
+            (() => {
+              const isFreePreview = selectedSeason?.seasonNumber === 1 && episode.episodeNumber === 1;
+              const isLocked = !signedIn && !isFreePreview;
+              return <button key={episode.id} type="button" onClick={() => onEpisodeChange(episode.id)} aria-label={`${episode.title}${isLocked ? ', sign in to watch' : !signedIn && isFreePreview ? ', free episode' : ''}`} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${selectedEpisodeId === episode.id ? 'border-primary/60 bg-primary/10' : 'border-white/10 hover:border-primary/40'}`}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[.06] font-mono-app text-[10px] text-primary">{isLocked ? <LockKeyhole size={13} /> : String(episode.episodeNumber).padStart(2, '0')}</span>
               <span className="min-w-0 truncate text-sm font-semibold">{episode.title}</span>
-            </button>
+              {isLocked && <span className="ml-auto shrink-0 font-mono-app text-[9px] uppercase tracking-wider text-muted-foreground">Sign in</span>}
+              {!signedIn && isFreePreview && <span className="ml-auto shrink-0 font-mono-app text-[9px] uppercase tracking-wider text-primary">Free</span>}
+            </button>;
+            })()
           ))}
         </div>
       ) : (

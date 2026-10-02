@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
 import {
   CreateEpisodeBody,
   CreateEpisodeParams,
@@ -29,8 +30,23 @@ router.get("/seasons/:seasonId/episodes", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.vary("Cookie");
+  const season = await getSeason(parsed.data.seasonId);
+  const signedIn = Boolean(getAuth(req).userId);
   const rows = await listEpisodes(parsed.data.seasonId);
-  res.json(ListEpisodesResponse.parse(rows));
+  const visibleRows = rows.map((episode) => {
+    const isFreePreview =
+      season?.seasonNumber === 1 && episode.episodeNumber === 1;
+    if (signedIn || isFreePreview) return episode;
+    return {
+      ...episode,
+      videoUrl: null,
+      videoPath: null,
+      captionsPath: null,
+    };
+  });
+  res.json(ListEpisodesResponse.parse(visibleRows));
 });
 
 router.post("/seasons/:seasonId/episodes", requireAdminClerkAuth, async (req, res): Promise<void> => {

@@ -171,6 +171,35 @@ export async function listEpisodes(seasonId: number): Promise<Episode[]> {
     .sort((left, right) => left.episodeNumber - right.episodeNumber);
 }
 
+export async function isFreeEpisodeAsset(objectPath: string): Promise<boolean | null> {
+  const [videoMatches, captionMatches] = await Promise.all([
+    episodes.where("videoPath", "==", objectPath).get(),
+    episodes.where("captionsPath", "==", objectPath).get(),
+  ]);
+  const matches = new Map<string, Episode>();
+  for (const document of [...videoMatches.docs, ...captionMatches.docs]) {
+    const episode = normalizeRecord<Episode>(document);
+    if (episode) matches.set(String(episode.id), episode);
+  }
+  if (matches.size === 0) return null;
+
+  const seasonNumbers = new Map<number, number | null>();
+  await Promise.all(
+    [...new Set([...matches.values()].map((episode) => episode.seasonId))].map(
+      async (seasonId) => {
+        const season = await getSeason(seasonId);
+        seasonNumbers.set(seasonId, season?.seasonNumber ?? null);
+      },
+    ),
+  );
+
+  const includesFreeEpisode = [...matches.values()].some(
+    (episode) =>
+      episode.episodeNumber === 1 && seasonNumbers.get(episode.seasonId) === 1,
+  );
+  return includesFreeEpisode;
+}
+
 export async function getEpisode(id: number): Promise<Episode | null> {
   return normalizeRecord<Episode>(await episodes.doc(String(id)).get());
 }

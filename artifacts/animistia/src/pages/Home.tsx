@@ -1,30 +1,89 @@
-import { ArrowRight, ChevronRight, Play, Plus, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, ChevronRight, Pause, Play, Plus, Sparkles } from 'lucide-react';
 import { Link } from 'wouter';
 import { useGetHighlights } from '@workspace/api-client-react';
 import { SectionHeading, LoadingGrid, Shell } from '@/components/AnimistiaShell';
 import { ShowCard } from '@/components/ShowCard';
 import { demoShows, getAssetUrl } from '@/lib/catalog';
 
+const selectionDuration = 6500;
+
 export default function Home() {
   const highlights = useGetHighlights();
-  const featured = highlights.data?.featured?.[0] ?? demoShows[0];
+  const selectionShows = useMemo(() => {
+    const catalog = highlights.data?.trending?.length ? highlights.data.trending : demoShows;
+    const series = catalog.filter((show) => show.mediaType === 'series');
+    const featuredSeries = highlights.data?.featured?.find((show) => show.mediaType === 'series');
+    const orderedSeries = featuredSeries
+      ? [featuredSeries, ...series.filter((show) => show.id !== featuredSeries.id)]
+      : series;
+    return orderedSeries.length ? orderedSeries : catalog;
+  }, [highlights.data?.featured, highlights.data?.trending]);
+  const [activeSelectionIndex, setActiveSelectionIndex] = useState(0);
+  const [rotationPaused, setRotationPaused] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const currentSelectionIndex = activeSelectionIndex % selectionShows.length;
+  const featured = selectionShows[currentSelectionIndex] ?? demoShows[0];
+  const heroWatchHref = featured.mediaType === 'series'
+    ? `/watch/series/${featured.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/1/1`
+    : `/watch/movies/${featured.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+  const featuredBackdrop = featured.bannerUrl || featured.thumbnailUrl;
   const trending = highlights.data?.trending?.length ? highlights.data.trending : demoShows.slice(1, 5);
   const latest = highlights.data?.latest?.length ? highlights.data.latest : demoShows.slice(2, 6);
+
+  useEffect(() => {
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(motionPreference.matches);
+    updatePreference();
+    motionPreference.addEventListener('change', updatePreference);
+    return () => motionPreference.removeEventListener('change', updatePreference);
+  }, []);
+
+  useEffect(() => {
+    if (selectionShows.length < 2 || rotationPaused || prefersReducedMotion) return;
+    const timer = window.setTimeout(() => {
+      setActiveSelectionIndex((current) => (current + 1) % selectionShows.length);
+    }, selectionDuration);
+    return () => window.clearTimeout(timer);
+  }, [activeSelectionIndex, selectionShows.length, rotationPaused, prefersReducedMotion]);
+
   return (
     <Shell><div>
-      <section className="relative min-h-[620px] overflow-hidden border-b border-white/[.07] sm:min-h-[690px]">
-         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 72% 28%, rgba(177, 106, 97, .25), transparent 38%), radial-gradient(ellipse at 18% 10%, rgba(235, 195, 120, .13), transparent 34%), linear-gradient(115deg, #15151d 5%, #1d1a27 52%, #302735 100%)' }} />{featured.bannerUrl && <img src={getAssetUrl(featured.bannerUrl)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-screen" />}
+      <section className="relative min-h-[620px] overflow-hidden border-b border-white/[.07] sm:min-h-[690px]" aria-label="Animistia anime selection" data-testid="hero-selection">
+         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 72% 28%, rgba(177, 106, 97, .25), transparent 38%), radial-gradient(ellipse at 18% 10%, rgba(235, 195, 120, .13), transparent 34%), linear-gradient(115deg, #15151d 5%, #1d1a27 52%, #302735 100%)' }} />
+         {featuredBackdrop && <img key={featured.id} src={getAssetUrl(featuredBackdrop)} alt="" aria-hidden="true" className="animate-selection-backdrop absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-screen" />}
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0 49.8%, rgba(247,230,198,.2) 50%, transparent 50.2%), linear-gradient(0deg, transparent 0 49.8%, rgba(247,230,198,.2) 50%, transparent 50.2%)', backgroundSize: '110px 110px' }} />
         <div className="relative mx-auto flex min-h-[620px] max-w-[1440px] items-end px-5 pb-16 sm:min-h-[690px] sm:px-8 sm:pb-20 lg:px-12">
-          <div className="max-w-2xl animate-rise">
-            <div className="mb-5 flex items-center gap-3 font-mono-app text-[10px] uppercase tracking-[.22em] text-primary"><span className="h-px w-9 bg-primary" />Animistia selection / 01</div>
+           <div key={featured.id} className="animate-selection-enter max-w-2xl">
+             <div className="mb-5 flex items-center gap-3 font-mono-app text-[10px] uppercase tracking-[.22em] text-primary"><span className="h-px w-9 bg-primary" />Animistia selection / {String(currentSelectionIndex + 1).padStart(2, '0')}</div>
             <h1 className="max-w-xl font-display text-6xl leading-[.91] tracking-[-.045em] text-[#f7e9d3] sm:text-8xl">{featured.title}</h1>
             <p className="mt-6 max-w-md text-sm leading-6 text-white/65 sm:text-base">{featured.synopsis}</p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href={`/watch/${featured.id}`} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-xs font-bold uppercase tracking-[.12em] text-primary-foreground transition hover:-translate-y-0.5 hover:brightness-105" data-testid="link-hero-watch"><Play size={14} fill="currentColor" />Watch now</Link>
+               <Link href={heroWatchHref} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-xs font-bold uppercase tracking-[.12em] text-primary-foreground transition hover:-translate-y-0.5 hover:brightness-105" data-testid="link-hero-watch"><Play size={14} fill="currentColor" />Watch now</Link>
               <Link href="/browse" className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-xs font-bold uppercase tracking-[.12em] text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-white/40" data-testid="link-hero-browse">Browse catalog <ArrowRight size={14} /></Link>
             </div>
             <div className="mt-8 flex gap-4 font-mono-app text-[10px] uppercase tracking-widest text-white/50"><span>{featured.year}</span><span>{featured.episodesCount} episodes</span><span className="text-primary">rating {featured.rating.toFixed(1)}</span></div>
+             {selectionShows.length > 1 && (
+               <div className="mt-7 flex items-center gap-3" role="group" aria-label="Anime selection controls" data-testid="hero-carousel-controls">
+                 <button type="button" onClick={() => setActiveSelectionIndex((currentSelectionIndex + selectionShows.length - 1) % selectionShows.length)} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition hover:border-primary hover:text-primary" aria-label="Previous anime selection">
+                   <ArrowLeft size={15} />
+                 </button>
+                 <div className="flex items-center gap-2">
+                   {selectionShows.map((show, index) => (
+                     <button key={show.id} type="button" onClick={() => setActiveSelectionIndex(index)} className={`h-1.5 rounded-full transition-all duration-500 ${index === currentSelectionIndex ? 'w-8 bg-primary' : 'w-2 bg-white/30 hover:bg-white/60'}`} aria-label={`Show selection ${String(index + 1).padStart(2, '0')}: ${show.title}`} aria-pressed={index === currentSelectionIndex} />
+                   ))}
+                 </div>
+                 <span className="font-mono-app text-[10px] tracking-widest text-white/55">{String(currentSelectionIndex + 1).padStart(2, '0')} / {String(selectionShows.length).padStart(2, '0')}</span>
+                 <button type="button" onClick={() => setActiveSelectionIndex((currentSelectionIndex + 1) % selectionShows.length)} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition hover:border-primary hover:text-primary" aria-label="Next anime selection">
+                   <ArrowRight size={15} />
+                 </button>
+                 {!prefersReducedMotion && (
+                   <button type="button" onClick={() => setRotationPaused((paused) => !paused)} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition hover:border-primary hover:text-primary" aria-label={rotationPaused ? 'Resume automatic selection' : 'Pause automatic selection'}>
+                     {rotationPaused ? <Play size={13} fill="currentColor" /> : <Pause size={13} />}
+                   </button>
+                 )}
+               </div>
+             )}
           </div>
           <div className="absolute bottom-10 right-8 hidden animate-drift lg:block"><div className="relative h-28 w-28 rounded-full border border-primary/25 p-2"><div className="flex h-full w-full items-center justify-center rounded-full border border-primary/20 font-mono-app text-[8px] uppercase tracking-[.2em] text-primary/70">stay curious</div></div></div>
         </div>
