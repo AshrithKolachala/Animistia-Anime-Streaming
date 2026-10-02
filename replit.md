@@ -9,13 +9,16 @@ Animistia is a cinematic anime streaming app with a curated catalog, authenticat
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `NODE_ENV=development pnpm --filter @workspace/api-server run migrate:development` — one-time import of development PostgreSQL records into Firestore
+- Required API env: `FIREBASE_SERVICE_ACCOUNT_JSON` — Firebase Admin service-account JSON
+- Import-only env: `DATABASE_URL` — PostgreSQL connection string for the development data import
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
+- App data: Firestore via Firebase Admin SDK
+- Import source: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
@@ -26,7 +29,7 @@ Animistia is a cinematic anime streaming app with a curated catalog, authenticat
 - `artifacts/animistia/src/components/` — the shared shell and catalog card presentation.
 - `artifacts/api-server/src/routes/` — catalog, developer lock, and object-storage API routes.
 - `lib/api-spec/openapi.yaml` — source of truth for API contracts and generated client hooks.
-- `lib/db/src/schema/` — Drizzle schema for shows and developer lock settings.
+- `lib/db/src/schema/` — PostgreSQL schema used by the one-time development-data import.
 - `artifacts/animistia/public/logo.png` and `logo.svg` — supplied Animistia mark for the app and Clerk screens.
 
 ## Architecture decisions

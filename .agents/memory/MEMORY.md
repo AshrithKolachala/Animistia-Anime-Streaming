@@ -1,1 +1,2 @@
 - [YouTube caption sourcing](youtube-captions.md) — custom captions come from uploaded WebVTT tracks, not caption extraction from the YouTube iframe.
+- [Animistia Firebase data](firebase-data-environments.md) — development catalog data seeds one Firestore database shared by development and production.
