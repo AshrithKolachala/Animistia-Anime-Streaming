@@ -7,6 +7,7 @@ import {
   showsTable,
 } from "@workspace/db";
 import type { DeveloperSettings, Episode, Season, Show } from "@workspace/db";
+import type { DocumentData, DocumentReference } from "firebase-admin/firestore";
 import { firestore } from "../lib/firebase";
 
 const importStateRef = firestore.collection("_system").doc("developmentPostgresImport");
@@ -79,39 +80,49 @@ async function importDevelopmentData() {
     },
   });
 
-  const writer = firestore.bulkWriter();
-  const writes: Promise<unknown>[] = [];
+  const writes: Array<{
+    reference: DocumentReference<DocumentData>;
+    data: DocumentData;
+  }> = [];
   for (const show of shows) {
-    writes.push(writer.set(firestore.collection("shows").doc(String(show.id)), show));
+    writes.push({ reference: firestore.collection("shows").doc(String(show.id)), data: show });
   }
   for (const season of seasons) {
-    writes.push(writer.set(firestore.collection("seasons").doc(String(season.id)), season));
-    writes.push(writer.set(
-      firestore.collection("seasonUniqueKeys").doc(
+    writes.push({ reference: firestore.collection("seasons").doc(String(season.id)), data: season });
+    writes.push({
+      reference: firestore.collection("seasonUniqueKeys").doc(
         `season-${season.showId}-${season.seasonNumber}`,
       ),
-      { recordId: season.id },
-    ));
+      data: { recordId: season.id },
+    });
   }
   for (const episode of episodes) {
-    writes.push(writer.set(firestore.collection("episodes").doc(String(episode.id)), episode));
-    writes.push(writer.set(
-      firestore.collection("episodeUniqueKeys").doc(
+    writes.push({ reference: firestore.collection("episodes").doc(String(episode.id)), data: episode });
+    writes.push({
+      reference: firestore.collection("episodeUniqueKeys").doc(
         `episode-${episode.seasonId}-${episode.episodeNumber}`,
       ),
-      { recordId: episode.id },
-    ));
+      data: { recordId: episode.id },
+    });
   }
   for (const setting of settings) {
-    writes.push(writer.set(
-      firestore.collection("developerSettings").doc(String(setting.id)),
-      setting,
-    ));
+    writes.push({
+      reference: firestore.collection("developerSettings").doc(String(setting.id)),
+      data: setting,
+    });
   }
 
   try {
-    await Promise.all(writes);
-    await writer.close();
+    const batchSize = 400;
+    for (let offset = 0; offset < writes.length; offset += batchSize) {
+      const batch = firestore.batch();
+      const chunk = writes.slice(offset, offset + batchSize);
+      for (const write of chunk) batch.set(write.reference, write.data);
+      await batch.commit();
+      console.info(
+        `Committed development import batch ${Math.floor(offset / batchSize) + 1}.`,
+      );
+    }
 
     const counters = {
       shows: Math.max(0, ...shows.map((show) => show.id)),
@@ -119,6 +130,27 @@ async function importDevelopmentData() {
       episodes: Math.max(0, ...episodes.map((episode) => episode.id)),
     };
     await firestore.collection("_system").doc("idCounters").set(counters, { merge: true });
+
+    const [showCount, seasonCount, episodeCount, settingsCount, seasonKeyCount, episodeKeyCount] =
+      await Promise.all([
+      firestore.collection("shows").get(),
+      firestore.collection("seasons").get(),
+      firestore.collection("episodes").get(),
+      firestore.collection("developerSettings").get(),
+      firestore.collection("seasonUniqueKeys").get(),
+      firestore.collection("episodeUniqueKeys").get(),
+    ]);
+    if (
+      showCount.size !== shows.length ||
+      seasonCount.size !== seasons.length ||
+      episodeCount.size !== episodes.length ||
+      settingsCount.size !== settings.length ||
+      seasonKeyCount.size !== seasons.length ||
+      episodeKeyCount.size !== episodes.length
+    ) {
+      throw new Error("Firestore record counts do not match the development database after import.");
+    }
+
     await importStateRef.set({
       status: "completed",
       completedAt: new Date(),
@@ -129,20 +161,6 @@ async function importDevelopmentData() {
         developerSettings: settings.length,
       },
     }, { merge: true });
-
-    const [showCount, seasonCount, episodeCount] = await Promise.all([
-      firestore.collection("shows").get(),
-      firestore.collection("seasons").get(),
-      firestore.collection("episodes").get(),
-    ]);
-    if (
-      showCount.size !== shows.length ||
-      seasonCount.size !== seasons.length ||
-      episodeCount.size !== episodes.length
-    ) {
-      throw new Error("Firestore record counts do not match the development database after import.");
-    }
-
     console.info(
       `Firestore import verified: ${shows.length} shows, ${seasons.length} seasons, ${episodes.length} episodes, ${settings.length} settings.`,
     );
